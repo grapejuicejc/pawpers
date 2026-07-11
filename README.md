@@ -19,3 +19,4 @@ samples, guidance on mobile development, and a full API reference.
 11/7/2026:
 -added dependencies in pubspec.yaml for fonts, navigation icons and image picker
 -created all relevant files for app functions
+-splash sceen completed in pubspec.yaml
