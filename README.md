@@ -14,3 +14,8 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+
+11/7/2026:
+-added dependencies in pubspec.yaml for fonts, navigation icons and image picker
+-created all relevant files for app functions
