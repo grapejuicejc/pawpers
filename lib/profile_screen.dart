@@ -5,8 +5,6 @@ import 'edit_profile.dart';
 import 'my_pets_screen.dart';
 import 'login.dart';
 
-/// The "Profile" tab. This is a plain widget (not its own Scaffold+nav) since
-/// it's rendered inside HomeScreen's IndexedStack alongside the other tabs.
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
@@ -17,9 +15,8 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
   late final TabController _tabController;
 
-  // DB (Supabase): replace with the current AppUser + fetched posts/comments.
   static const _name = 'John Doe';
-  static const _bio = null; // e.g. "Dog mom of 2 🐕" once set
+  String? _bio; // DB (Supabase): load from user profile
 
   @override
   void initState() {
@@ -28,9 +25,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Future<void> _handleLogout() async {
-    // DB (Supabase):
-    // await SupabaseService.instance.signOut();
-
+    // DB (Supabase): await SupabaseService.instance.signOut();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
@@ -40,69 +35,74 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Stack(
       children: [
-        const SizedBox(height: 16),
-        const ImagePlaceholderBox(height: 84, width: 84, borderRadius: 42),
-        const SizedBox(height: 10),
-        const Text(_name, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-        Text(
-          _bio ?? 'Add a bio',
-          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
-        ),
-        const SizedBox(height: 12),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        Column(
           children: [
-            TextButton(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-              ),
-              child: const Text('Edit Profile', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 16),
+            const ImagePlaceholderBox(height: 84, width: 84, borderRadius: 42),
+            const SizedBox(height: 10),
+            const Text(_name, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            Text(
+              _bio ?? 'Add a bio',
+              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
             ),
-            const Text('|', style: TextStyle(color: AppColors.textSecondary)),
-            TextButton(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const MyPetsScreen()),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const EditProfileScreen()),
+                  ),
+                  child: const Text('Edit Profile', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                ),
+                const Text('|', style: TextStyle(color: AppColors.textSecondary)),
+                TextButton(
+                  onPressed: () => Navigator.of(context).push(
+                    MaterialPageRoute(builder: (_) => const MyPetsScreen()),
+                  ),
+                  child: const Text('Your Pets', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+            TabBar(
+              controller: _tabController,
+              labelColor: AppColors.primary,
+              unselectedLabelColor: AppColors.textSecondary,
+              indicatorColor: AppColors.primary,
+              tabs: const [
+                Tab(text: 'Post'),
+                Tab(text: 'Comments'),
+                Tab(text: 'Likes'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                controller: _tabController,
+                children: const [
+                  _PostsTab(),
+                  _CommentsTab(),
+                  _LikesTab(),
+                ],
               ),
-              child: const Text('Your Pets', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: const Icon(Icons.verified_outlined, color: AppColors.primary, size: 20),
+              title: const Text('Are you a veterinarian?', style: TextStyle(fontSize: 12)),
+              subtitle: const Text('Click here to Get Verified', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+              onTap: () {},
             ),
           ],
         ),
-        TabBar(
-          controller: _tabController,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.textSecondary,
-          indicatorColor: AppColors.primary,
-          tabs: const [
-            Tab(text: 'Post'),
-            Tab(text: 'Comments'),
-            Tab(text: 'Likes'),
-          ],
-        ),
-        Expanded(
-          child: TabBarView(
-            controller: _tabController,
-            children: const [
-              _PostsTab(),
-              _CommentsTab(),
-              _LikesTab(),
-            ],
+        Positioned(
+          top: 8,
+          right: 8,
+          child: IconButton(
+            onPressed: _handleLogout,
+            icon: const Icon(Icons.logout, color: AppColors.danger),
           ),
-        ),
-        const Divider(height: 1),
-        ListTile(
-          leading: const Icon(Icons.verified_outlined, color: AppColors.primary, size: 20),
-          title: const Text('Are you a veterinarian?', style: TextStyle(fontSize: 12)),
-          subtitle: const Text('Click here to Get Verified', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
-          onTap: () {
-            // TODO: vet verification flow (likely a form + document upload)
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.logout, color: AppColors.danger, size: 20),
-          title: const Text('Logout', style: TextStyle(color: AppColors.danger, fontWeight: FontWeight.w700)),
-          onTap: _handleLogout,
         ),
       ],
     );
@@ -124,7 +124,6 @@ class _PostsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // DB (Supabase): SupabaseService.instance.fetchPosts(authorId: currentUser.id)
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -147,9 +146,7 @@ class _PostsTab extends StatelessWidget {
                 ),
               ),
               IconButton(
-                onPressed: () {
-                  // TODO: open edit-post flow
-                },
+                onPressed: () {},
                 icon: const Icon(Icons.edit_outlined, size: 16, color: AppColors.primary),
               ),
             ],
@@ -165,7 +162,6 @@ class _CommentsTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // DB (Supabase): SupabaseService.instance.fetchComments(authorId: currentUser.id)
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -201,7 +197,6 @@ class _LikesTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // DB (Supabase): SupabaseService.instance.fetchLikedPosts(currentUser.id)
     return const Center(
       child: Text('No liked posts yet.', style: TextStyle(color: AppColors.textSecondary)),
     );

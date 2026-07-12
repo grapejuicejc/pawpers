@@ -1,19 +1,27 @@
 /// Represents a pet added under "My Pets" on the profile screen.
+import 'dart:io';
+
 class Pet {
   final String id;
   final String ownerId;
   final String name;
   final String breed;
+  final String sex;
+  int age;
   final String? description;
   final String? photoUrl;
+  final File? imageFile;
 
   Pet({
     required this.id,
     required this.ownerId,
     required this.name,
+    required this.sex,
+    required this.age,
     required this.breed,
     this.description,
     this.photoUrl,
+    this.imageFile,
   });
 
   // ---------------------------------------------------------------------

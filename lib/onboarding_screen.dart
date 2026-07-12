@@ -8,29 +8,42 @@ class _OnboardingPageData {
   final String title;
   final String feature;
   final String description;
+  final String imagePath;
 
   const _OnboardingPageData({
     required this.title,
     required this.feature,
     required this.description,
+    required this.imagePath,
   });
 }
 
 const _pages = [
   _OnboardingPageData(
     title: 'Welcome',
-    feature: 'Feature #1',
-    description: 'Connect with a community of pet lovers near you.',
+    feature: 'Community Pet Care',
+    description:
+        'Join a friendly network of dog and cat owners sharing experiences and advice.',
+    imagePath: 'assets/onboarding1.jpg',
   ),
   _OnboardingPageData(
     title: 'Welcome',
-    feature: 'Feature #2',
-    description: 'Report strays and help pets in need get rescued.',
+    feature: 'Report Strays',
+    description: 'Help pets in need get rescued.',
+    imagePath: 'assets/onboarding2.jpg',
   ),
   _OnboardingPageData(
     title: 'Welcome',
-    feature: 'Feature #3',
+    feature: 'Find Nearby Vets',
+    description:
+        'Easily locate verified emergency clinics and house-call veterinarians.',
+    imagePath: 'assets/onboarding3.jpg',
+  ),
+  _OnboardingPageData(
+    title: 'Welcome',
+    feature: 'AI Pet Emotion Recognition',
     description: "Use AI to understand your pet's current mood.",
+    imagePath: 'assets/onboarding4.png',
   ),
 ];
 
@@ -47,9 +60,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   void _onNext() {
     if (_index == _pages.length - 1) {
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
+      Navigator.of(
+        context,
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
     } else {
       _controller.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -86,7 +99,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
                         ),
                         const SizedBox(height: 24),
-                        const ImagePlaceholderBox(height: 160),
+                        ImagePlaceholderBox(height: 160, assetImage: page.imagePath),
                         const SizedBox(height: 24),
                         Text(
                           page.feature,

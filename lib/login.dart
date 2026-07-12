@@ -59,7 +59,8 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 30),
-              const ImagePlaceholderBox(height: 90, width: 90, borderRadius: 45),
+              ImagePlaceholderBox(height: 130, width: 200, borderRadius: 100, 
+              assetImage: 'assets/splash.png', backgroundColor: AppColors.background),
               const SizedBox(height: 20),
               const Text(
                 'Hello :)',

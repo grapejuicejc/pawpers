@@ -10,7 +10,9 @@ class ImagePlaceholderBox extends StatelessWidget {
   final double? width;
   final double borderRadius;
   final File? imageFile;
+  final String? assetImage;
   final IconData icon;
+  final Color? backgroundColor;
 
   const ImagePlaceholderBox({
     super.key,
@@ -18,7 +20,9 @@ class ImagePlaceholderBox extends StatelessWidget {
     this.width,
     this.borderRadius = 10,
     this.imageFile,
+    this.assetImage,
     this.icon = Icons.image_outlined,
+    this.backgroundColor,
   });
 
   @override
@@ -28,10 +32,12 @@ class ImagePlaceholderBox extends StatelessWidget {
       child: Container(
         height: height,
         width: width ?? double.infinity,
-        color: AppColors.placeholder,
+        color: backgroundColor ?? AppColors.placeholder,
         child: imageFile != null
             ? Image.file(imageFile!, fit: BoxFit.cover)
-            : Icon(icon, size: 36, color: AppColors.textSecondary),
+            : assetImage != null
+                ? Image.asset(assetImage!, fit: BoxFit.cover)
+                : Icon(icon, size: 36, color: AppColors.textSecondary),
       ),
     );
   }

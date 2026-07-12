@@ -5,6 +5,7 @@ import '../widgets/bottom_nav.dart';
 import '../widgets/image_placeholder.dart';
 import 'ai_emotion.dart';
 import 'profile_screen.dart';
+import 'notifications_screen.dart';
 import 'upload_post.dart';
 
 /// Root shell shown right after login. Holds the bottom nav and swaps
@@ -43,10 +44,12 @@ class _HomeScreenState extends State<HomeScreen> {
           children: _pages,
         ),
       ),
-      bottomNavigationBar: CustomBottomNav(
-        currentIndex: _navIndex,
-        onTap: _onNavTap,
-        onAddTap: () => showUploadActionSheet(context),
+      bottomNavigationBar: SafeArea(
+        child: CustomBottomNav(
+          currentIndex: _navIndex,
+          onTap: _onNavTap,
+          onAddTap: () => showUploadActionSheet(context),
+        ),
       ),
     );
   }
@@ -98,9 +101,20 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 12, 20, 8),
-          child: Text('Community Post', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Community Post', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+              IconButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                ),
+                icon: const Icon(Icons.notifications_outlined, color: AppColors.primary),
+              ),
+            ],
+          ),
         ),
         SizedBox(
           height: 40,
