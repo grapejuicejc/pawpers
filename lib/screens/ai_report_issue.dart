@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'app_theme.dart';
+import '../app_theme.dart';
 
 const _issueOptions = [
   'Option #1: Wrong emotion detected',

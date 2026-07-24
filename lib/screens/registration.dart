@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../app_theme.dart';
-import '../widgets/primary_btn.dart';
+import '../../app_theme.dart';
+import '../../widgets/primary_btn.dart';
 import 'home_screen.dart';
 
 class RegistrationScreen extends StatefulWidget {

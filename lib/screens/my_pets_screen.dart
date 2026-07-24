@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
-import '../models/pet.dart';
-import '../app_theme.dart';
-import '../widgets/image_placeholder.dart';
-import '../widgets/primary_btn.dart';
+import '../../models/pet.dart';
+import '../../app_theme.dart';
+import '../../widgets/image_placeholder.dart';
+import '../../widgets/primary_btn.dart';
 
 class MyPetsScreen extends StatefulWidget {
   const MyPetsScreen({super.key});

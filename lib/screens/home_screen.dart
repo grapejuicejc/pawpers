@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import '../models/post.dart';
-import '../app_theme.dart';
-import '../widgets/bottom_nav.dart';
-import '../widgets/image_placeholder.dart';
+import '../../models/post.dart';
+import '../../app_theme.dart';
+import '../../widgets/bottom_nav.dart';
+import '../../widgets/image_placeholder.dart';
 import 'ai_emotion.dart';
 import 'profile_screen.dart';
 import 'notifications_screen.dart';

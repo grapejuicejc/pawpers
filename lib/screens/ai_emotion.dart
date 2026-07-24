@@ -1,9 +1,9 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../app_theme.dart';
-import '../widgets/image_placeholder.dart';
-import '../widgets/primary_btn.dart';
+import '../../app_theme.dart';
+import '../../widgets/image_placeholder.dart';
+import '../../widgets/primary_btn.dart';
 import 'ai_report_issue.dart';
 
 /// Result returned from the emotion-analysis call.

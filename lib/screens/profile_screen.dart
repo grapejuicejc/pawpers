@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../app_theme.dart';
-import '../widgets/image_placeholder.dart';
+import '../../app_theme.dart';
+import '../../widgets/image_placeholder.dart';
 import 'edit_profile.dart';
 import 'my_pets_screen.dart';
 import 'login.dart';

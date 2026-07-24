@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../app_theme.dart';
-import '../widgets/image_placeholder.dart';
+import '../../app_theme.dart';
+import '../../widgets/image_placeholder.dart';
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'onboarding_screen.dart';
+import 'screens/onboarding_screen.dart';
 import 'app_theme.dart';
 
 // DB (Supabase):
