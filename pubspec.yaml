@@ -43,11 +43,11 @@ dependencies:
 
   google_maps_flutter: ^2.9.0
   geolocator: ^13.0.1 #get device location
-  http: ^1.1.0 #make HTTP requests
+  http: ^1.5.0 #make HTTP requests
   geocoding: ^4.0.0 #turns typed text into coordinates
-  url_launcher: ^6.1.10 #open links in browser
-  flutter_local_notifications: ^13.0.0 #send notifications
-  permission_handler: ^7.0.1 #handle location permission requests
+  url_launcher: ^6.3.2 #open links in browser
+  permission_handler: ^12.0.1 #handle location permission requests
+  flutter_local_notifications: ^19.5.0 #notifications
 
   #supabase_flutter (for later)
 

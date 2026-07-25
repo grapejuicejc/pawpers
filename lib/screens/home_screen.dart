@@ -7,6 +7,7 @@ import 'ai_emotion.dart';
 import 'profile_screen.dart';
 import 'notifications_screen.dart';
 import 'upload_post.dart';
+import 'view_clinics.dart';
 
 /// Root shell shown right after login. Holds the bottom nav and swaps
 /// between the 4 real tabs (the 5th "slot" is the "+" button, which opens
@@ -26,7 +27,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _HomeFeedTab(),
     AiEmotionScreen(),
     SizedBox.shrink(), // placeholder, never shown (see CustomBottomNav)
-    _CommunityPlaceholderTab(),
+    ViewClinic(),
     ProfileScreen(),
   ];
 
@@ -231,24 +232,24 @@ final _placeholderPosts = [
   ),
 ];
 
-// ---------------------------------------------------------------------------
-// COMMUNITY / RESCUE TAB (placeholder — not detailed in the wireframe yet)
-// ---------------------------------------------------------------------------
+// // ---------------------------------------------------------------------------
+// // VIEW NEARBY CLINICS TAB
+// // ---------------------------------------------------------------------------
 
-class _CommunityPlaceholderTab extends StatelessWidget {
-  const _CommunityPlaceholderTab();
+// class _ClinicPlaceholderTab extends StatelessWidget {
+//   const _ClinicPlaceholderTab();
 
-  @override
-  Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.all(24),
-        child: Text(
-          'Rescue / Community tab coming soon.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.textSecondary),
-        ),
-      ),
-    );
-  }
-}
+//   @override
+//   Widget build(BuildContext context) {
+//     return const Center(
+//       child: Padding(
+//         padding: EdgeInsets.all(24),
+//         child: Text(
+//           'View Nearby Clinics tab coming soon.',
+//           textAlign: TextAlign.center,
+//           style: TextStyle(color: AppColors.textSecondary),
+//         ),
+//       ),
+//     );
+//   }
+// }
