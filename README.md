@@ -20,3 +20,6 @@ samples, guidance on mobile development, and a full API reference.
 -added dependencies in pubspec.yaml for fonts, navigation icons and image picker
 -created all relevant files for app functions
 -splash sceen completed in pubspec.yaml
+
+AIzaSyD3pyhrWt673U3iiK4WmRiyWdN3THCZdPc
+google maps api for place api ^

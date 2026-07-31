@@ -3,7 +3,7 @@ class VetClinic {
   final String clinicName;
   final String address;
   final String city;
-  final String state;
+  //final String state;
   final double latitude;
   final double longitude;
   final String phoneNumber;
@@ -17,7 +17,7 @@ class VetClinic {
     required this.clinicName,
     required this.address,
     required this.city,
-    required this.state,
+   // required this.state,
     required this.latitude,
     required this.longitude,
     required this.phoneNumber,
