@@ -48,4 +48,110 @@ class ClinicService {
 
     return clinics;
   }
+
+   Future<List<VetClinic>> searchClinics(
+    String query,
+  ) async {
+
+
+    final url =
+        "https://maps.googleapis.com/maps/api/place/textsearch/json"
+        "?query=$query veterinary clinic"
+        "&key=$apiKey";
+
+
+    final response = await http.get(
+      Uri.parse(url),
+    );
+
+
+    final data = json.decode(response.body);
+
+
+    List<VetClinic> clinics = [];
+
+
+    for (var place in data["results"]) {
+
+
+      clinics.add(
+
+        VetClinic(
+
+          clinicId:
+              place["place_id"],
+
+
+          clinicName:
+              place["name"],
+
+
+          address:
+              place["formatted_address"] ??
+              place["vicinity"],
+
+
+          city:
+              "",
+
+
+          phoneNumber:
+              "",
+
+
+          operatingHours:
+              "",
+
+
+          services:
+              [],
+
+
+          latitude:
+              place["geometry"]["location"]["lat"],
+
+
+          longitude:
+              place["geometry"]["location"]["lng"],
+
+        ),
+
+      );
+
+    }
+
+
+    return clinics;
+
+  }
+
+  //to get clinic details by place_id
+  Future<Map<String, dynamic>> getClinicDetails(String placeId) async {
+
+  final url =
+      "https://maps.googleapis.com/maps/api/place/details/json"
+      "?place_id=$placeId"
+      "&fields=name,formatted_phone_number,opening_hours,website"
+      "&key=$apiKey";
+
+
+  final response = await http.get(
+    Uri.parse(url),
+  );
+
+
+  final data = json.decode(response.body);
+
+
+  if (data["status"] != "OK") {
+    throw Exception("Failed to get clinic details");
+  }
+
+
+  return data["result"];
+
 }
+
+}
+
+
