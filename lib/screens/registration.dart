@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../../app_theme.dart';
 import '../../widgets/primary_btn.dart';
 import 'home_screen.dart';
+import '../../services/supabase_service.dart';
+//import 'package:supabase_flutter/supabase_flutter.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -19,12 +21,12 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String? _errorText;
 
   Future<void> _handleSignUp() async {
-    final name = _nameController.text.trim();
+    final username = _nameController.text.trim();
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     final confirm = _confirmPasswordController.text;
 
-    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+    if (username.isEmpty || email.isEmpty || password.isEmpty) {
       setState(() => _errorText = 'Please fill in all fields.');
       return;
     }
@@ -39,15 +41,24 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     });
 
     // DB (Supabase):
-    // final user = await SupabaseService.instance.signUp(
-    //   name: name, email: email, password: password,
-    // );
-    // if (user == null) {
-    //   setState(() { _isLoading = false; _errorText = 'Sign up failed.'; });
-    //   return;
-    // }
+    final user = await SupabaseService.instance.signUp(
+      email,
+      password,
+      username,
+    );
 
-    await Future.delayed(const Duration(milliseconds: 600)); // placeholder delay
+    if (user == null) {
+      setState(() {
+        _isLoading = false;
+        _errorText = 'Sign up failed.';
+      });
+      return;
+    }
+    
+
+    await Future.delayed(
+      const Duration(milliseconds: 600),
+    ); // placeholder delay
 
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -74,13 +85,16 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
               const SizedBox(height: 30),
               _fieldLabel('NAME'),
-              TextField(controller: _nameController, decoration: const InputDecoration(hintText: 'Jane Doe')),
+              TextField(
+                controller: _nameController,
+                decoration: const InputDecoration(hintText: 'Jane Doe'),
+              ),
               const SizedBox(height: 12),
               _fieldLabel('EMAIL'),
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(hintText: 'sample@gmail.com'),
+                decoration: const InputDecoration(hintText: 'sample@mail.com'),
               ),
               const SizedBox(height: 12),
               _fieldLabel('PASSWORD'),
@@ -98,10 +112,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               ),
               if (_errorText != null) ...[
                 const SizedBox(height: 10),
-                Text(_errorText!, style: const TextStyle(color: AppColors.danger, fontSize: 12)),
+                Text(
+                  _errorText!,
+                  style: const TextStyle(color: AppColors.danger, fontSize: 12),
+                ),
               ],
               const SizedBox(height: 20),
-              PrimaryButton(label: 'Sign up', onPressed: _handleSignUp, isLoading: _isLoading),
+              PrimaryButton(
+                label: 'Sign up',
+                onPressed: _handleSignUp,
+                isLoading: _isLoading,
+              ),
               const SizedBox(height: 20),
             ],
           ),
@@ -111,17 +132,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Widget _fieldLabel(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(
-          text,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textSecondary,
-            letterSpacing: 0.5,
-          ),
-        ),
-      );
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: 11,
+        fontWeight: FontWeight.w700,
+        color: AppColors.textSecondary,
+        letterSpacing: 0.5,
+      ),
+    ),
+  );
 
   @override
   void dispose() {

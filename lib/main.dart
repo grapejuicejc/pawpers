@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
 import 'screens/onboarding_screen.dart';
 import 'app_theme.dart';
-
-// DB (Supabase):
-// import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'screens/home_screen.dart';
+import 'screens/admin/admin_home.dart';
+import 'screens/login.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // DB (Supabase): initialize once you've uncommented supabase_flutter in
-  // pubspec.yaml and added your project's URL + anon key.
-  // await Supabase.initialize(
-  //   url: 'https://YOUR_PROJECT_REF.supabase.co',
-  //   anonKey: 'YOUR_SUPABASE_ANON_KEY',
-  // );
+  // DB (Supabase): initialize 
+  // project's URL + anon key.
+  await Supabase.initialize(
+    url: 'https://uptrhfbrwanlvhgrcqxm.supabase.co/rest/v1/',
+    publishableKey: 'sb_publishable_F_HCwCOsz0FqL13X0LCbGw_ptPjVcdj',
+  );
 
   runApp(const PawPersApp());
 }
@@ -28,6 +29,12 @@ class PawPersApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       home: const OnboardingScreen(),
+      //initialRoute: '/',
+      routes: {
+        //'/': (context) => const LoginScreen(),
+        '/home': (context) => const HomeScreen(),
+        '/admin': (context) => const AdminHomeScreen(),
+      },
     );
   }
 }

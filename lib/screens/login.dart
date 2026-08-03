@@ -4,6 +4,7 @@ import '../../widgets/image_placeholder.dart';
 import '../../widgets/primary_btn.dart';
 import 'registration.dart';
 import 'home_screen.dart';
+import '../../services/supabase_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -35,9 +36,94 @@ class _LoginScreenState extends State<LoginScreen> {
     // DB (Supabase):
     // final user = await SupabaseService.instance.signIn(email, password);
     // if (user == null) {
+    //   if (!mounted) return;
     //   setState(() { _isLoading = false; _errorText = 'Invalid credentials.'; });
     //   return;
     // }
+    // final profile = await SupabaseService.instance.getUserProfile(
+    //     user.id,
+    //   );
+
+    //   if (profile == null) {
+    //     if (!mounted) return;
+    //     setState(() {
+    //       _isLoading = false;
+    //       _errorText = 'User profile not found.';
+    //     });
+    //     return;
+    //   }
+
+    //   final role = profile['role'];
+
+    //   if (role == 'admin') {
+
+    //     Navigator.pushReplacementNamed(
+    //       context,
+    //       '/admin',
+    //     );
+
+    //   } else {
+
+    //     Navigator.pushReplacementNamed(
+    //       context,
+    //       '/home',
+    //     );
+
+    //   }
+
+    try {
+
+        final user = await SupabaseService.instance.signIn(
+          email,
+          password,
+        );
+
+        if (user == null) {
+          if (!mounted) return;
+
+          setState(() {
+            _errorText = 'Invalid credentials.';
+            _isLoading = false;
+          });
+
+          return;
+        }
+
+
+        final profile =
+            await SupabaseService.instance.getUserProfile(user.id);
+
+
+        if (!mounted) return;
+
+
+        if (profile?['role'] == 'admin') {
+
+          Navigator.pushReplacementNamed(
+            context,
+            '/admin',
+          );
+
+        } else {
+
+          Navigator.pushReplacementNamed(
+            context,
+            '/home',
+          );
+
+        }
+
+      }
+      catch(e){
+
+        if (!mounted) return;
+
+        setState(() {
+          _errorText = e.toString();
+          _isLoading = false;
+        });
+
+      }
 
     await Future.delayed(const Duration(milliseconds: 600)); // placeholder delay
 

@@ -131,9 +131,18 @@ class ClinicService {
   final url =
       "https://maps.googleapis.com/maps/api/place/details/json"
       "?place_id=$placeId"
-      "&fields=name,formatted_phone_number,opening_hours,website"
+      "&fields="
+      "name,"
+      "formatted_address,"
+      "formatted_phone_number,"
+      "website,"
+      "rating,"
+      "user_ratings_total,"
+      "opening_hours,"
+      "photos,"
+      "reviews,"
+      "geometry"
       "&key=$apiKey";
-
 
   final response = await http.get(
     Uri.parse(url),
@@ -150,6 +159,21 @@ class ClinicService {
 
   return data["result"];
 
+}
+
+String? getPhotoUrl(Map<String, dynamic> details) {
+  if (details["photos"] == null ||
+      (details["photos"] as List).isEmpty) {
+    return null;
+  }
+
+  final photoReference =
+      details["photos"][0]["photo_reference"];
+
+  return "https://maps.googleapis.com/maps/api/place/photo"
+      "?maxwidth=1000"
+      "&photo_reference=$photoReference"
+      "&key=$apiKey";
 }
 
 }
