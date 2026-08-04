@@ -1,9 +1,10 @@
+import 'package:PawPers/screens/onboarding_screen.dart';
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
 import '../../widgets/primary_btn.dart';
-import 'home_screen.dart';
-import '../../services/supabase_service.dart';
+//import '../../services/supabase_service.dart';
 //import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../auth/auth_service.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -13,6 +14,7 @@ class RegistrationScreen extends StatefulWidget {
 }
 
 class _RegistrationScreenState extends State<RegistrationScreen> {
+  final authService = AuthService();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -41,13 +43,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     });
 
     // DB (Supabase):
-    final user = await SupabaseService.instance.signUp(
-      email,
-      password,
-      username,
-    );
+    // final user = await SupabaseService.instance.signUp(
+    //   email,
+    //   password,
+    //   username,
+    // );
 
-    if (user == null) {
+    try {
+      await authService.signUpWithEmailPassword(email, password, username);
+    } catch (e) {
       setState(() {
         _isLoading = false;
         _errorText = 'Sign up failed.';
@@ -60,7 +64,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   // Always go to Home after registration
   Navigator.of(context).pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => const HomeScreen()),
+    MaterialPageRoute(builder: (_) => const OnboardingScreen()),
     (route) => false,
   );
     

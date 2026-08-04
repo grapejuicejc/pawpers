@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../../app_theme.dart';
 import '../../widgets/image_placeholder.dart';
 import '../../widgets/primary_btn.dart';
-import 'login.dart';
+import 'home_screen.dart';
 
 class _OnboardingPageData {
   final String title;
@@ -62,7 +62,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     if (_index == _pages.length - 1) {
       Navigator.of(
         context,
-      ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
+      ).pushReplacement(MaterialPageRoute(builder: (_) => const HomeScreen()));
     } else {
       _controller.nextPage(
         duration: const Duration(milliseconds: 300),

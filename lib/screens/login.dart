@@ -3,8 +3,7 @@ import '../../app_theme.dart';
 import '../../widgets/image_placeholder.dart';
 import '../../widgets/primary_btn.dart';
 import 'registration.dart';
-//import 'home_screen.dart';
-import '../../services/supabase_service.dart';
+import '../../auth/auth_service.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,6 +13,9 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
+  //get auth service
+  final authService = AuthService();
+
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
@@ -34,89 +36,27 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     // DB (Supabase):
-    // final user = await SupabaseService.instance.signIn(email, password);
-    // if (user == null) {
-    //   if (!mounted) return;
-    //   setState(() { _isLoading = false; _errorText = 'Invalid credentials.'; });
-    //   return;
-    // }
-    // final profile = await SupabaseService.instance.getUserProfile(
-    //     user.id,
-    //   );
+   
+    try {
+      //final user = await SupabaseService.instance.signIn(email, password);
+      await authService.signInWithEmailPassword(email, password);
 
-    //   if (profile == null) {
-    //     if (!mounted) return;
-    //     setState(() {
-    //       _isLoading = false;
-    //       _errorText = 'User profile not found.';
-    //     });
-    //     return;
-    //   }
-
-    //   final role = profile['role'];
-
-    //   if (role == 'admin') {
-
-    //     Navigator.pushReplacementNamed(
-    //       context,
-    //       '/admin',
-    //     );
-
-    //   } else {
-
-    //     Navigator.pushReplacementNamed(
-    //       context,
-    //       '/home',
-    //     );
-
-    //   }
-
-   try {
-  final user = await SupabaseService.instance.signIn(
-    email,
-    password,
-  );
-
-  if (user == null) {
-    if (!mounted) return;
-
-    setState(() {
-      _errorText = 'Invalid email or password.';
-      _isLoading = false;
-    });
-
-    return;
-  }
-
-  final profile =
-      await SupabaseService.instance.getUserProfile(user.id);
-
-  if (!mounted) return;
-
-  if (profile?['role'] == 'admin') {
-    Navigator.pushReplacementNamed(context, '/admin');
-  } else {
-    Navigator.pushReplacementNamed(context, '/home');
-  }
-} catch (e) {
-  if (!mounted) return;
-
-  setState(() {
-    _errorText = 'Invalid email or password.';
-    _isLoading = false;
-  });
-
-  return;
-}
-
-    // await Future.delayed(const Duration(milliseconds: 600)); // placeholder delay
-
-    // if (!mounted) return;
-    // setState(() => _isLoading = false);
-    // Navigator.of(context).pushAndRemoveUntil(
-    //   MaterialPageRoute(builder: (_) => const HomeScreen()),
-    //   (route) => false,
-    // );
+      if (!mounted) return;
+      // Navigate to the home screen after successful login
+      Navigator.of(context).pushReplacementNamed('/home');
+      
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _errorText = e.toString();
+      });
+    } finally {
+      if(mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -129,8 +69,13 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 30),
-              ImagePlaceholderBox(height: 130, width: 200, borderRadius: 100, 
-              assetImage: 'assets/splash.png', backgroundColor: AppColors.background),
+              ImagePlaceholderBox(
+                height: 130,
+                width: 200,
+                borderRadius: 100,
+                assetImage: 'assets/splash.png',
+                backgroundColor: AppColors.background,
+              ),
               const SizedBox(height: 20),
               const Text(
                 'Hello :)',
@@ -158,7 +103,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               if (_errorText != null) ...[
                 const SizedBox(height: 10),
-                Text(_errorText!, style: const TextStyle(color: AppColors.danger, fontSize: 12)),
+                Text(
+                  _errorText!,
+                  style: const TextStyle(color: AppColors.danger, fontSize: 12),
+                ),
               ],
               Align(
                 alignment: Alignment.centerRight,
@@ -166,20 +114,33 @@ class _LoginScreenState extends State<LoginScreen> {
                   onPressed: () {
                     // TODO: forgot-password flow (Supabase: client.auth.resetPasswordForEmail)
                   },
-                  child: const Text('Forgot Password?', style: TextStyle(color: AppColors.primary)),
+                  child: const Text(
+                    'Forgot Password?',
+                    style: TextStyle(color: AppColors.primary),
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
-              PrimaryButton(label: 'Login', onPressed: _handleLogin, isLoading: _isLoading),
+              PrimaryButton(
+                label: 'Login',
+                onPressed: _handleLogin,
+                isLoading: _isLoading,
+              ),
               const SizedBox(height: 14),
               GestureDetector(
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const RegistrationScreen()),
-                ),
+                onTap:
+                    () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const RegistrationScreen(),
+                      ),
+                    ),
                 child: const Text.rich(
                   TextSpan(
                     text: 'New User? ',
-                    style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+                    style: TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 13,
+                    ),
                     children: [
                       TextSpan(
                         text: 'Sign up here.',
@@ -201,20 +162,20 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _fieldLabel(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Align(
-          alignment: Alignment.centerLeft,
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textSecondary,
-              letterSpacing: 0.5,
-            ),
-          ),
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Align(
+      alignment: Alignment.centerLeft,
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: AppColors.textSecondary,
+          letterSpacing: 0.5,
         ),
-      );
+      ),
+    ),
+  );
 
   @override
   void dispose() {

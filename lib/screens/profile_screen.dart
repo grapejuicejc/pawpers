@@ -4,6 +4,7 @@ import '../../widgets/image_placeholder.dart';
 import 'edit_profile.dart';
 import 'my_pets_screen.dart';
 import 'login.dart';
+import '../../auth/auth_service.dart';  
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -14,6 +15,7 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  final authService = AuthService();
 
   static const _name = 'John Doe';
   String? _bio; // DB (Supabase): load from user profile
@@ -25,7 +27,8 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   }
 
   Future<void> _handleLogout() async {
-    // DB (Supabase): await SupabaseService.instance.signOut();
+    // DB (Supabase): 
+    await authService.signOut();
     if (!mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),

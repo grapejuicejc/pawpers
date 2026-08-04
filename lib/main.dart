@@ -1,3 +1,4 @@
+import 'package:PawPers/auth/auth_gate.dart';
 import 'package:flutter/material.dart';
 import 'screens/onboarding_screen.dart';
 import 'app_theme.dart';
@@ -29,7 +30,7 @@ class PawPersApp extends StatelessWidget {
       title: 'PawPers',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      home: const OnboardingScreen(),
+      home: AuthGate(),
       //initialRoute: '/',
       routes: {
         //'/': (context) => const LoginScreen(),
