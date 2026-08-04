@@ -5,6 +5,7 @@ import 'edit_profile.dart';
 import 'my_pets_screen.dart';
 import 'login.dart';
 import '../../auth/auth_service.dart';  
+import '../../services/supabase_service.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -16,14 +17,27 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   final authService = AuthService();
+  
+  Future<void> _loadProfile() async {
+  final profile =
+      await SupabaseService.instance.getCurrentUserProfile();
 
-  static const _name = 'John Doe';
-  String? _bio; // DB (Supabase): load from user profile
+  if (!mounted) return;
+
+  setState(() {
+    _username = profile?['username'];
+    _bio = profile?['bio'];
+  });
+}
+
+  String? _username; 
+  String? _bio; 
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadProfile();
   }
 
   Future<void> _handleLogout() async {
@@ -45,7 +59,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
             const SizedBox(height: 16),
             const ImagePlaceholderBox(height: 84, width: 84, borderRadius: 42),
             const SizedBox(height: 10),
-            const Text(_name, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
+            Text(_username ?? 'User', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             Text(
               _bio ?? 'Add a bio',
               style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),

@@ -50,9 +50,26 @@ class SupabaseService {
     }
   }
 
-  Future<Map<String, dynamic>?> getUserProfile(String userId) async {
+  // Future<Map<String, dynamic>?> getUserProfile(String userId) async {
+  //   final response =
+  //       await _client.from('profiles').select().eq('id', userId).single();
+
+  //   return response;
+  // }
+  Future<Map<String, dynamic>?> getCurrentUserProfile() async {
+    final user = _client.auth.currentUser;
+
+    if (user == null) {
+      log("No logged in user");
+      return null;
+    }
+
+    log("Current user id: ${user.id}");
+
     final response =
-        await _client.from('profiles').select().eq('id', userId).single();
+        await _client.from('profiles').select().eq('id', user.id).single();
+
+    log("Profile data: $response");
 
     return response;
   }
