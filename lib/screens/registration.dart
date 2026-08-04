@@ -54,18 +54,18 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       });
       return;
     }
+
+     if (!mounted) return;
+  setState(() => _isLoading = false);
+
+  // Always go to Home after registration
+  Navigator.of(context).pushAndRemoveUntil(
+    MaterialPageRoute(builder: (_) => const HomeScreen()),
+    (route) => false,
+  );
     
 
-    await Future.delayed(
-      const Duration(milliseconds: 600),
-    ); // placeholder delay
-
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
-      (route) => false,
-    );
+   
   }
 
   @override

@@ -1,44 +1,45 @@
-/// Simple user model used across the app.
-/// When Supabase is wired up, this will likely map 1:1 to a `profiles` table row.
 class AppUser {
   final String id;
-  final String name;
+  final String username;
   final String email;
+  final String role;
   final String? bio;
-  final String? avatarUrl;
+  final String? profilePhotoUrl;
   final bool isVerified;
 
   AppUser({
     required this.id,
-    required this.name,
+    required this.username,
     required this.email,
+    required this.role,
     this.bio,
-    this.avatarUrl,
+    this.profilePhotoUrl,
     this.isVerified = false,
   });
 
-  // ---------------------------------------------------------------------
-  // DB (Supabase) — uncomment and use once the `profiles` table exists.
-  // ---------------------------------------------------------------------
-  // factory AppUser.fromMap(Map<String, dynamic> map) {
-  //   return AppUser(
-  //     id: map['id'] as String,
-  //     name: map['name'] as String? ?? '',
-  //     email: map['email'] as String? ?? '',
-  //     bio: map['bio'] as String?,
-  //     avatarUrl: map['avatar_url'] as String?,
-  //     isVerified: map['is_verified'] as bool? ?? false,
-  //   );
-  // }
-  //
-  // Map<String, dynamic> toMap() {
-  //   return {
-  //     'id': id,
-  //     'name': name,
-  //     'email': email,
-  //     'bio': bio,
-  //     'avatar_url': avatarUrl,
-  //     'is_verified': isVerified,
-  //   };
-  // }
+
+  factory AppUser.fromMap(Map<String, dynamic> map) {
+    return AppUser(
+      id: map['userID'] as String,
+      username: map['username'] as String? ?? '',
+      email: map['email'] as String? ?? '',
+      role: map['role'] as String? ?? 'user',
+      bio: map['bio'] as String?,
+      profilePhotoUrl: map['profilePhotoUrl'] as String?,
+      isVerified: map['is_verified'] as bool? ?? false,
+    );
+  }
+
+
+  Map<String, dynamic> toMap() {
+    return {
+      'userID': id,
+      'username': username,
+      'email': email,
+      'role': role,
+      'bio': bio,
+      'profilePhotoUrl': profilePhotoUrl,
+      'is_verified': isVerified,
+    };
+  }
 }

@@ -12,7 +12,8 @@ Future<void> main() async {
   // DB (Supabase): initialize 
   // project's URL + anon key.
   await Supabase.initialize(
-    url: 'https://uptrhfbrwanlvhgrcqxm.supabase.co/rest/v1/',
+    url: 'https://uptrhfbrwanlvhgrcqxm.supabase.co',
+    //url: 'https://uptrhfbrwanlvhgrcqxm.supabase.co/rest/v1/',
     publishableKey: 'sb_publishable_F_HCwCOsz0FqL13X0LCbGw_ptPjVcdj',
   );
 
@@ -38,6 +39,8 @@ class PawPersApp extends StatelessWidget {
     );
   }
 }
+
+
  
 
 //Created 9 July 2026

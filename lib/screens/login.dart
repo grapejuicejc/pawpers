@@ -3,7 +3,7 @@ import '../../app_theme.dart';
 import '../../widgets/image_placeholder.dart';
 import '../../widgets/primary_btn.dart';
 import 'registration.dart';
-import 'home_screen.dart';
+//import 'home_screen.dart';
 import '../../services/supabase_service.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -71,68 +71,52 @@ class _LoginScreenState extends State<LoginScreen> {
 
     //   }
 
-    try {
+   try {
+  final user = await SupabaseService.instance.signIn(
+    email,
+    password,
+  );
 
-        final user = await SupabaseService.instance.signIn(
-          email,
-          password,
-        );
-
-        if (user == null) {
-          if (!mounted) return;
-
-          setState(() {
-            _errorText = 'Invalid credentials.';
-            _isLoading = false;
-          });
-
-          return;
-        }
-
-
-        final profile =
-            await SupabaseService.instance.getUserProfile(user.id);
-
-
-        if (!mounted) return;
-
-
-        if (profile?['role'] == 'admin') {
-
-          Navigator.pushReplacementNamed(
-            context,
-            '/admin',
-          );
-
-        } else {
-
-          Navigator.pushReplacementNamed(
-            context,
-            '/home',
-          );
-
-        }
-
-      }
-      catch(e){
-
-        if (!mounted) return;
-
-        setState(() {
-          _errorText = e.toString();
-          _isLoading = false;
-        });
-
-      }
-
-    await Future.delayed(const Duration(milliseconds: 600)); // placeholder delay
-
+  if (user == null) {
     if (!mounted) return;
-    setState(() => _isLoading = false);
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
-      (route) => false,
-    );
+
+    setState(() {
+      _errorText = 'Invalid email or password.';
+      _isLoading = false;
+    });
+
+    return;
+  }
+
+  final profile =
+      await SupabaseService.instance.getUserProfile(user.id);
+
+  if (!mounted) return;
+
+  if (profile?['role'] == 'admin') {
+    Navigator.pushReplacementNamed(context, '/admin');
+  } else {
+    Navigator.pushReplacementNamed(context, '/home');
+  }
+} catch (e) {
+  if (!mounted) return;
+
+  setState(() {
+    _errorText = 'Invalid email or password.';
+    _isLoading = false;
+  });
+
+  return;
+}
+
+    // await Future.delayed(const Duration(milliseconds: 600)); // placeholder delay
+
+    // if (!mounted) return;
+    // setState(() => _isLoading = false);
+    // Navigator.of(context).pushAndRemoveUntil(
+    //   MaterialPageRoute(builder: (_) => const HomeScreen()),
+    //   (route) => false,
+    // );
   }
 
   @override
