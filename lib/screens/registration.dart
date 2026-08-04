@@ -2,7 +2,7 @@ import 'package:PawPers/screens/onboarding_screen.dart';
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
 import '../../widgets/primary_btn.dart';
-//import '../../services/supabase_service.dart';
+import '../../services/supabase_service.dart';
 //import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../auth/auth_service.dart';
 
@@ -48,19 +48,57 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     //   password,
     //   username,
     // );
+     try {
+    final user = await SupabaseService.instance.signUp(
+      email,
+      password,
+      username,
+    );
 
-    try {
-      await authService.signUpWithEmailPassword(email, password, username);
-    } catch (e) {
+    if (!mounted) return;
+
+    if (user == null) {
       setState(() {
-        _isLoading = false;
-        _errorText = 'Sign up failed.';
+        _errorText = 'Registration failed.';
       });
       return;
     }
 
-     if (!mounted) return;
-  setState(() => _isLoading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Registration successful!'),
+      ),
+    );
+
+    //Navigator.pop(context); // Back to Login screen
+
+  } catch (e) {
+    if (!mounted) return;
+
+    setState(() {
+      _errorText = e.toString();
+    });
+
+  } finally {
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+//below part works 
+  //   try {
+  //     await authService.signUpWithEmailPassword(email, password, username);
+  //   } catch (e) {
+  //     setState(() {
+  //       _isLoading = false;
+  //       _errorText = 'Sign up failed.';
+  //     });
+  //     return;
+  //   }
+
+  //    if (!mounted) return;
+  // setState(() => _isLoading = false);
 
   // Always go to Home after registration
   Navigator.of(context).pushAndRemoveUntil(

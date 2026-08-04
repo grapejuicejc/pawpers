@@ -18,28 +18,28 @@ class AppUser {
   });
 
 
-  // factory AppUser.fromMap(Map<String, dynamic> map) {
-  //   return AppUser(
-  //     id: map['userID'] as String,
-  //     username: map['username'] as String? ?? '',
-  //     email: map['email'] as String? ?? '',
-  //     role: map['role'] as String? ?? 'user',
-  //     bio: map['bio'] as String?,
-  //     profilePhotoUrl: map['profilePhotoUrl'] as String?,
-  //     isVerified: map['is_verified'] as bool? ?? false,
-  //   );
-  // }
+  factory AppUser.fromMap(Map<String, dynamic> map) {
+    return AppUser(
+      id: map['id'] as String,
+      username: map['username'] as String? ?? '',
+      email: map['email'] as String? ?? '',
+      role: map['role'] as String? ?? 'User',
+      bio: map['bio'] as String?,
+      profilePhotoUrl: map['profilePhotoUrl'] as String?,
+      isVerified: map['is_verified'] as bool? ?? false,
+    );
+  }
 
 
-  // Map<String, dynamic> toMap() {
-  //   return {
-  //     'userID': id,
-  //     'username': username,
-  //     'email': email,
-  //     'role': role,
-  //     'bio': bio,
-  //     'profilePhotoUrl': profilePhotoUrl,
-  //     'is_verified': isVerified,
-  //   };
-  // }
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'username': username,
+      'email': email,
+      'role': role,
+      'bio': bio,
+      'profilePhotoUrl': profilePhotoUrl,
+      'is_verified': isVerified,
+    };
+  }
 }

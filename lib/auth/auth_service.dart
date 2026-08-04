@@ -20,11 +20,27 @@ class AuthService {
     String password,
     String username,
   ) async {
-    return await _client.auth.signUp(
+    final response = await _client.auth.signUp(
       email: email,
       password: password,
-      data: {'username': username},
     );
+    final user = response.user;
+
+    if (user == null) {
+      throw Exception('Failed to create account.');
+    }
+
+    await _client.from('profiles').insert({
+      'id': user.id,
+      'username': username,
+      'email': email,
+      'role': 'User',
+      'bio': null,
+      'profilePhotoUrl': null,
+      'is_verified': false,
+    });
+
+    return response;
   }
 
   //sign out
