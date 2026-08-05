@@ -27,7 +27,6 @@ class _ViewClinicState extends State<ViewClinic> {
 
   List<VetClinic> clinics = []; // List to hold nearby clinics
 
-
   @override
   void initState() {
     super.initState();
@@ -49,7 +48,6 @@ class _ViewClinicState extends State<ViewClinic> {
         position.longitude,
       );
 
-    
       for (var clinic in clinics) {
         markers.add(
           Marker(
@@ -86,10 +84,62 @@ class _ViewClinicState extends State<ViewClinic> {
         loading = false;
       });
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(e.toString())));
+      _showLocationDialog();
     }
+  }
+
+    Future<void> _showLocationDialog() async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(18),
+          ),
+
+          title: Row(
+            children: const [
+              Icon(
+                Icons.location_off,
+                color: Colors.orange,
+              ),
+              SizedBox(width: 8),
+              Text("Location Required"),
+            ],
+          ),
+
+          content: const Text(
+            "PawPers needs access to your location to find nearby veterinary clinics.\n\n"
+            "Please enable Location.",
+          ),
+
+          actions: [
+
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("Cancel"),
+            ),
+
+            ElevatedButton.icon(
+              icon: const Icon(Icons.settings),
+              label: const Text("Open Settings"),
+
+              onPressed: () async {
+
+                Navigator.pop(context);
+
+                await Geolocator.openLocationSettings();
+
+              },
+            ),
+
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -127,22 +177,14 @@ class _ViewClinicState extends State<ViewClinic> {
             maxChildSize: 0.75,
 
             builder: (context, scrollController) {
-
               return Container(
                 padding: const EdgeInsets.all(12),
 
                 decoration: const BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.vertical(
-                    top: Radius.circular(25),
-                  ),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
 
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 10,
-                    ),
-                  ],
+                  boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10)],
                 ),
 
                 child: _buildClinicList(scrollController),
@@ -183,44 +225,32 @@ class _ViewClinicState extends State<ViewClinic> {
           prefixIcon: Icon(Icons.search),
         ),
         onSubmitted: (value) async {
-          final results =
-              await ClinicService()
-                  .searchClinics(value);
+          final results = await ClinicService().searchClinics(value);
 
           setState(() {
             clinics = results;
             markers.clear();
 
-            for(var clinic in clinics){
+            for (var clinic in clinics) {
               markers.add(
                 Marker(
                   markerId: MarkerId(clinic.clinicId),
 
-                  position: LatLng(
-                    clinic.latitude,
-                    clinic.longitude,
-                  ),
+                  position: LatLng(clinic.latitude, clinic.longitude),
 
-                  infoWindow: InfoWindow(
-                    title: clinic.clinicName,
-                  ),
+                  infoWindow: InfoWindow(title: clinic.clinicName),
                 ),
               );
             }
           });
-          if(results.isNotEmpty){
+          if (results.isNotEmpty) {
             mapController?.animateCamera(
               CameraUpdate.newLatLngZoom(
-                LatLng(
-                  results.first.latitude,
-                  results.first.longitude,
-                ),
+                LatLng(results.first.latitude, results.first.longitude),
                 14,
               ),
             );
-
           }
-
         },
       ),
     );
@@ -232,72 +262,50 @@ class _ViewClinicState extends State<ViewClinic> {
       padding: const EdgeInsets.all(12),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(25),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black26,
-            blurRadius: 10,
-          )
-        ],
+        borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
+        boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 10)],
       ),
 
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-
               const Text(
                 "Nearby Clinics",
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
 
               Text(
                 "${clinics.length} found",
-                style: const TextStyle(
-                  color: Colors.grey,
-                ),
-              )
+                style: const TextStyle(color: Colors.grey),
+              ),
             ],
           ),
 
           const SizedBox(height: 10),
-
 
           Expanded(
             child: ListView.builder(
               controller: scrollController,
               itemCount: clinics.length,
 
-              itemBuilder: (context,index){
-
+              itemBuilder: (context, index) {
                 final clinic = clinics[index];
 
                 return GestureDetector(
-                  onTap: (){
-
+                  onTap: () {
                     mapController?.animateCamera(
                       CameraUpdate.newLatLngZoom(
-                        LatLng(
-                          clinic.latitude,
-                          clinic.longitude,
-                        ),
+                        LatLng(clinic.latitude, clinic.longitude),
                         16,
                       ),
                     );
-
                   },
 
-
                   child: Container(
-                    margin: const EdgeInsets.only(bottom:10),
+                    margin: const EdgeInsets.only(bottom: 10),
 
                     padding: const EdgeInsets.all(12),
 
@@ -306,14 +314,11 @@ class _ViewClinicState extends State<ViewClinic> {
                       borderRadius: BorderRadius.circular(15),
                     ),
 
-
                     child: Row(
-
                       children: [
-
                         Container(
-                          height:50,
-                          width:50,
+                          height: 50,
+                          width: 50,
 
                           decoration: BoxDecoration(
                             color: Colors.blue.shade100,
@@ -326,79 +331,65 @@ class _ViewClinicState extends State<ViewClinic> {
                           ),
                         ),
 
-
-                        const SizedBox(width:12),
-
+                        const SizedBox(width: 12),
 
                         Expanded(
-
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
 
-                            children:[
-
+                            children: [
                               Text(
                                 clinic.clinicName,
-                                maxLines:1,
-                                overflow:TextOverflow.ellipsis,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
 
-                                style:const TextStyle(
-                                  fontWeight:FontWeight.bold,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
 
-
-                              const SizedBox(height:5),
-
+                              const SizedBox(height: 5),
 
                               Text(
                                 clinic.address,
-                                maxLines:2,
-                                overflow:TextOverflow.ellipsis,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
 
-                                style:const TextStyle(
-                                  fontSize:12,
-                                  color:Colors.grey,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey,
                                 ),
                               ),
-
                             ],
                           ),
                         ),
 
-
                         IconButton(
-                          icon: const Icon(
-                          Icons.chevron_right,
-                          ),
+                          icon: const Icon(Icons.chevron_right),
                           onPressed: () async {
-                            final details =
-                                await ClinicService()
-                                    .getClinicDetails(clinic.clinicId);
+                            final details = await ClinicService()
+                                .getClinicDetails(clinic.clinicId);
 
                             Navigator.push(
                               context,
 
                               MaterialPageRoute(
-                                builder: (context) => ClinicDetailsPage(
-                                  clinic: clinic,
-                                  details: details,
-                                ),
+                                builder:
+                                    (context) => ClinicDetailsPage(
+                                      clinic: clinic,
+                                      details: details,
+                                    ),
                               ),
                             );
-
                           },
-                        )
-
+                        ),
                       ],
                     ),
                   ),
                 );
-
               },
             ),
-          )
-
+          ),
         ],
       ),
     );

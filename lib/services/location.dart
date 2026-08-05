@@ -10,13 +10,14 @@ class LocationService {
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
 
     if (!serviceEnabled) {
+      await Geolocator.openLocationSettings();
       throw Exception("Location services are disabled.");
     }
 
+    //check permission
     permission = await Geolocator.checkPermission();
 
     if (permission == LocationPermission.denied) {
-
       permission = await Geolocator.requestPermission();
 
       if (permission == LocationPermission.denied) {
@@ -25,6 +26,7 @@ class LocationService {
     }
 
     if (permission == LocationPermission.deniedForever) {
+      await Geolocator.openAppSettings();
       throw Exception("Location permissions permanently denied.");
     }
 
