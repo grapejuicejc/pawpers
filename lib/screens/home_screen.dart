@@ -23,13 +23,32 @@ class _HomeScreenState extends State<HomeScreen> {
   int _navIndex = 0;
 
   // Index 2 is the "+" button and never actually renders a page.
-  final _pages = const [
-    _HomeFeedTab(),
-    AiEmotionScreen(),
-    SizedBox.shrink(), // placeholder, never shown (see CustomBottomNav)
-    ViewClinic(),
-    ProfileScreen(),
-  ];
+  // final _pages = const [
+  //   _HomeFeedTab(),
+  //   AiEmotionScreen(),
+  //   SizedBox.shrink(), // placeholder, never shown (see CustomBottomNav)
+  //   ViewClinic(),
+  //   ProfileScreen(),
+  // ];
+
+  Widget _buildPage() {
+  switch (_navIndex) {
+    case 0:
+      return const _HomeFeedTab();
+
+    case 1:
+      return const AiEmotionScreen();
+
+    case 3:
+      return const ViewClinic();
+
+    case 4:
+      return const ProfileScreen();
+
+    default:
+      return const SizedBox.shrink();
+  }
+}
 
   void _onNavTap(int index) {
     if (index == 2) return; // "+" handled by onAddTap, not a real tab
@@ -40,11 +59,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: IndexedStack(
-          index: _navIndex,
-          children: _pages,
+        child: _buildPage()
         ),
-      ),
       bottomNavigationBar: SafeArea(
         child: CustomBottomNav(
           currentIndex: _navIndex,

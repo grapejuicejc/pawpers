@@ -83,64 +83,62 @@ class _ViewClinicState extends State<ViewClinic> {
       setState(() {
         loading = false;
       });
-
-      _showLocationDialog();
     }
   }
 
-    Future<void> _showLocationDialog() async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
+  //   Future<void> _showLocationDialog() async {
+  //   showDialog(
+  //     context: context,
+  //     barrierDismissible: false,
+  //     builder: (context) {
+  //       return AlertDialog(
+  //         shape: RoundedRectangleBorder(
+  //           borderRadius: BorderRadius.circular(18),
+  //         ),
 
-          title: Row(
-            children: const [
-              Icon(
-                Icons.location_off,
-                color: Colors.orange,
-              ),
-              SizedBox(width: 8),
-              Text("Location Required"),
-            ],
-          ),
+  //         title: Row(
+  //           children: const [
+  //             Icon(
+  //               Icons.location_off,
+  //               color: Colors.orange,
+  //             ),
+  //             SizedBox(width: 8),
+  //             Text("Location Required"),
+  //           ],
+  //         ),
 
-          content: const Text(
-            "PawPers needs access to your location to find nearby veterinary clinics.\n\n"
-            "Please enable Location.",
-          ),
+  //         content: const Text(
+  //           "PawPers needs access to your location to find nearby veterinary clinics.\n\n"
+  //           "Please enable Location.",
+  //         ),
 
-          actions: [
+  //         actions: [
 
-            TextButton(
-              onPressed: () {
-                Navigator.pop(context);
-              },
-              child: const Text("Cancel"),
-            ),
+  //           TextButton(
+  //             onPressed: () {
+  //               Navigator.pop(context);
+  //             },
+  //             child: const Text("Cancel"),
+  //           ),
 
-            ElevatedButton.icon(
-              icon: const Icon(Icons.settings),
-              label: const Text("Open Settings"),
+  //           ElevatedButton.icon(
+  //             icon: const Icon(Icons.settings),
+  //             label: const Text("Open Settings"),
 
-              onPressed: () async {
+  //             onPressed: () async {
 
-                Navigator.pop(context);
+  //               Navigator.pop(context);
 
-                await Geolocator.openLocationSettings();
+  //               await Geolocator.openLocationSettings();
 
-              },
-            ),
+  //             },
+  //           ),
 
-          ],
-        );
-      },
-    );
-  }
+  //         ],
+  //       );
+  //     },
+  //   );
+  // }
 
   @override
   Widget build(BuildContext context) {
