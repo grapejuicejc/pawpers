@@ -27,11 +27,16 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
   setState(() {
     _username = profile?['username'];
     _bio = profile?['bio'];
+    _profilePhotoUrl = profile?['profilePhotoUrl'];
   });
+
+  print ("IMAGE URL: $_profilePhotoUrl");
+  
 }
 
   String? _username; 
   String? _bio; 
+  String? _profilePhotoUrl;
 
   @override
   void initState() {
@@ -57,7 +62,38 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         Column(
           children: [
             const SizedBox(height: 16),
-            const ImagePlaceholderBox(height: 84, width: 84, borderRadius: 42),
+            //const ImagePlaceholderBox(height: 84, width: 84, borderRadius: 42),
+            _profilePhotoUrl != null && _profilePhotoUrl!.isNotEmpty
+              ? ClipOval(
+                  child: Image.network(
+                    _profilePhotoUrl!,
+                    height: 84,
+                    width: 84,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) {
+                        print("IMAGE LOADED");
+                        return child;
+                      }
+
+                      print("LOADING IMAGE...");
+                      return const CircularProgressIndicator();
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      print("IMAGE ERROR: $error");
+                      return const ImagePlaceholderBox(
+                        height: 84,
+                        width: 84,
+                        borderRadius: 42,
+                      );
+                    },
+                  ),
+                )
+              : const ImagePlaceholderBox(
+                  height: 84,
+                  width: 84,
+                  borderRadius: 42,
+                ),
             const SizedBox(height: 10),
             Text(_username ?? 'User', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
             Text(
@@ -69,9 +105,17 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 TextButton(
-                  onPressed: () => Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const EditProfileScreen()),
-                  ),
+                  onPressed: () async {
+                    final updated = await Navigator.of(context).push<bool>(
+                      MaterialPageRoute(
+                        builder: (_) => const EditProfileScreen(),
+                      ),
+                    );
+
+                    if (updated == true) {
+                      await _loadProfile();
+                    }
+                  },
                   child: const Text('Edit Profile', style: TextStyle(color: AppColors.primary, fontWeight: FontWeight.w600)),
                 ),
                 const Text('|', style: TextStyle(color: AppColors.textSecondary)),

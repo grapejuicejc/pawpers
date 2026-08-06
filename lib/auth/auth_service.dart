@@ -4,15 +4,40 @@ class AuthService {
   final SupabaseClient _client = Supabase.instance.client;
 
   //sign in with email and password
-  Future<AuthResponse> signInWithEmailPassword(
-    String email,
-    String password,
-  ) async {
-    return await _client.auth.signInWithPassword(
-      email: email,
-      password: password,
+ Future<void> signInWithEmailPassword(
+  String email,
+  String password,
+) async {
+  // Step 1: Check auth.users
+  final response = await _client.auth.signInWithPassword(
+    email: email,
+    password: password,
+  );
+
+  final user = response.user;
+
+  if (user == null) {
+    throw Exception("Invalid credentials.");
+  }
+
+
+  // Step 2: Check profiles table
+  final profile = await _client
+      .from('profiles')
+      .select()
+      .eq('id', user.id)
+      .maybeSingle();
+
+
+  // Profile deleted
+  if (profile == null) {
+    await _client.auth.signOut();
+
+    throw Exception(
+      "Account does not exist. Please sign up again.",
     );
   }
+}
 
   //sign up with email and password
   Future<AuthResponse> signUpWithEmailPassword(

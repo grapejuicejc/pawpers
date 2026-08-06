@@ -4,6 +4,7 @@ import '../../widgets/image_placeholder.dart';
 import '../../widgets/primary_btn.dart';
 import 'registration.dart';
 import '../../auth/auth_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -36,26 +37,31 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     // DB (Supabase):
-   
+
     try {
-      //final user = await SupabaseService.instance.signIn(email, password);
       await authService.signInWithEmailPassword(email, password);
 
       if (!mounted) return;
-      // Navigate to the home screen after successful login
+
       Navigator.of(context).pushReplacementNamed('/home');
-      
+    } on AuthException catch (e) {
+      if (!mounted) return;
+
+      setState(() {
+        _errorText = "Account Not Found. Please sign up.";
+      });
     } catch (e) {
       if (!mounted) return;
+
       setState(() {
-        _errorText = e.toString();
+        _errorText = e.toString().replaceFirst("Exception: ", "");
       });
     } finally {
-      if(mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
