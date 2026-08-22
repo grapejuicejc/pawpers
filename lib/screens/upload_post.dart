@@ -3,6 +3,7 @@ import '../../app_theme.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'report_stray.dart';
 
 /// Bottom sheet shown when the user taps the "+" tab.
 /// Matches the "UPLOAD POST SCREEN" wireframe: dimmed background with
@@ -60,8 +61,11 @@ Future<void> showUploadActionSheet(BuildContext context) {
                   subtitle: const Text('Help a pet in need'),
                   onTap: () {
                     Navigator.of(context).pop();
-                    // TODO: navigate to a "Report Stray" flow (location + photo).
-                    // Not detailed in the wireframe yet — hook up once designed.
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ReportStrayScreen(),
+                      ),
+                    );
                   },
                 ),
               ],
@@ -100,7 +104,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   Future<void> _pickImages() async {
     final picker = ImagePicker();
 
-     final remainingSlots = 10 - _selectedImages.length;
+    final remainingSlots = 10 - _selectedImages.length;
 
     if (remainingSlots <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -111,8 +115,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       return;
     }
 
-    final pickedImages = await picker.pickMultiImage(
-      imageQuality: 85);
+    final pickedImages = await picker.pickMultiImage(imageQuality: 85);
 
     if (pickedImages.isEmpty) return;
 
@@ -120,9 +123,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     final imagesToAdd = pickedImages.take(remainingSlots);
 
     setState(() {
-      _selectedImages.addAll(
-        imagesToAdd.map((image) => File(image.path)),
-      );
+      _selectedImages.addAll(imagesToAdd.map((image) => File(image.path)));
     });
 
     if (pickedImages.length > remainingSlots && mounted) {
@@ -186,66 +187,62 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               .select()
               .single();
 
-        final postId = post['postID'];
+      final postId = post['postID'];
 
+      print('Created post: $postId');
 
-        print('Created post: $postId');
-
-      
       //upload image to PostImages table
-       for (int i = 0; i < _selectedImages.length; i++) {
-          final image = _selectedImages[i];
+      for (int i = 0; i < _selectedImages.length; i++) {
+        final image = _selectedImages[i];
 
-          // Generate unique file name
-          final fileName =
-              '${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
+        // Generate unique file name
+        final fileName = '${DateTime.now().millisecondsSinceEpoch}_$i.jpg';
 
-          // Storage path
-          final storagePath = '$postId/$fileName';
+        // Storage path
+        final storagePath = '$postId/$fileName';
 
-          // Upload image to Supabase Storage
-          await supabase.storage
-              .from('post-images')
-              .upload(
-                storagePath,
-                image,
-                fileOptions: const FileOptions(
-                  contentType: 'image/jpeg',
-                  upsert: false,
-                ),
-              );
+        // Upload image to Supabase Storage
+        await supabase.storage
+            .from('post-images')
+            .upload(
+              storagePath,
+              image,
+              fileOptions: const FileOptions(
+                contentType: 'image/jpeg',
+                upsert: false,
+              ),
+            );
 
-          // --------------------------------------------------
-          // 3. GET IMAGE URL
-          // --------------------------------------------------
+        // --------------------------------------------------
+        // 3. GET IMAGE URL
+        // --------------------------------------------------
 
-          final imageUrl = supabase.storage
-              .from('post-images')
-              .getPublicUrl(storagePath);
+        final imageUrl = supabase.storage
+            .from('post-images')
+            .getPublicUrl(storagePath);
 
-          print('Uploaded image: $imageUrl');
+        print('Uploaded image: $imageUrl');
 
-          // --------------------------------------------------
-          // 4. SAVE IMAGE URL TO PostImages
-          // --------------------------------------------------
+        // --------------------------------------------------
+        // 4. SAVE IMAGE URL TO PostImages
+        // --------------------------------------------------
 
-          await supabase.from('PostImages').insert({
-            'postID': postId,
-            'photoUrl': imageUrl,
-          });
-        }
+        await supabase.from('PostImages').insert({
+          'postID': postId,
+          'photoUrl': imageUrl,
+        });
+      }
 
-        print('Post and images uploaded successfully.');
+      print('Post and images uploaded successfully.');
 
-        if (!mounted) return;
+      if (!mounted) return;
 
-        setState(() => _isPosting = false);
+      setState(() => _isPosting = false);
 
-        Navigator.of(context).pop();
+      Navigator.of(context).pop();
+    } catch (e) {
+      print('Error creating post: $e');
 
-      } catch (e) {
-        print('Error creating post: $e');
-      
       if (!mounted) return;
 
       setState(() => _isPosting = false);
@@ -254,167 +251,161 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       if (!mounted) return;
       setState(() => _isPosting = false);
 
-       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to create post: $e'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to create post: $e')));
     }
   }
 
-    @override
-    Widget build(BuildContext context) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Create Post')),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const CircleAvatar(
-                      radius: 18,
-                      backgroundColor: AppColors.placeholder,
-                      child: Icon(Icons.person, color: AppColors.textSecondary),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      _username ?? 'Loading...',
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
-                  ],
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Create Post')),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const CircleAvatar(
+                    radius: 18,
+                    backgroundColor: AppColors.placeholder,
+                    child: Icon(Icons.person, color: AppColors.textSecondary),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    _username ?? 'Loading...',
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _captionController,
+                maxLines: 4,
+                decoration: const InputDecoration(
+                  hintText: "What's on your mind today?",
                 ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _captionController,
-                  maxLines: 4,
-                  decoration: const InputDecoration(
-                    hintText: "What's on your mind today?",
+              ),
+              const SizedBox(height: 14),
+              if (_selectedImages.isNotEmpty)
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _selectedImages.length,
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 8,
+                    mainAxisSpacing: 8,
                   ),
-                ),
-                const SizedBox(height: 14),
-                if (_selectedImages.isNotEmpty)
-                  GridView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _selectedImages.length,
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                        ),
-                    itemBuilder: (context, index) {
-                      return ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.file(
-                          _selectedImages[index],
-                          fit: BoxFit.cover,
-                        ),
-                      );
-                    },
-                  ),
-                OutlinedButton.icon(
-                  onPressed: _pickImages,
-                  icon: const Icon(
-                    Icons.add_photo_alternate_outlined,
-                    color: AppColors.primary,
-                  ),
-                  label: const Text(
-                    'Add Photos',
-                    style: TextStyle(color: AppColors.primary),
-                  ),
-                  style: OutlinedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(46),
-                    side: const BorderSide(color: AppColors.primary),
-                    shape: RoundedRectangleBorder(
+                  itemBuilder: (context, index) {
+                    return ClipRRect(
                       borderRadius: BorderRadius.circular(10),
-                    ),
+                      child: Image.file(
+                        _selectedImages[index],
+                        fit: BoxFit.cover,
+                      ),
+                    );
+                  },
+                ),
+              OutlinedButton.icon(
+                onPressed: _pickImages,
+                icon: const Icon(
+                  Icons.add_photo_alternate_outlined,
+                  color: AppColors.primary,
+                ),
+                label: const Text(
+                  'Add Photos',
+                  style: TextStyle(color: AppColors.primary),
+                ),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(46),
+                  side: const BorderSide(color: AppColors.primary),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
                   ),
                 ),
-                const SizedBox(height: 20),
-                const Text(
-                  'Select Keywords',
-                  style: TextStyle(fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children:
-                      _keywordOptions.map((keyword) {
-                        final selected = _selectedKeywords.contains(keyword);
-                        return ChoiceChip(
-                          label: Text(keyword),
-                          selected: selected,
-                          selectedColor: AppColors.accent,
-                          backgroundColor: AppColors.chipGrey,
-                          labelStyle: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            color:
-                                selected
-                                    ? AppColors.textPrimary
-                                    : AppColors.textSecondary,
-                          ),
-                          onSelected: (val) {
-                            setState(() {
-                              if (val) {
-                                _selectedKeywords.add(keyword);
-                              } else {
-                                _selectedKeywords.remove(keyword);
-                              }
-                            });
-                          },
-                        );
-                      }).toList(),
-                ),
-                const SizedBox(height: 28),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed:
-                            _isPosting
-                                ? null
-                                : () => Navigator.of(context).pop(),
-                        style: OutlinedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(48),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Select Keywords',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children:
+                    _keywordOptions.map((keyword) {
+                      final selected = _selectedKeywords.contains(keyword);
+                      return ChoiceChip(
+                        label: Text(keyword),
+                        selected: selected,
+                        selectedColor: AppColors.accent,
+                        backgroundColor: AppColors.chipGrey,
+                        labelStyle: TextStyle(
+                          fontWeight: FontWeight.w600,
+                          color:
+                              selected
+                                  ? AppColors.textPrimary
+                                  : AppColors.textSecondary,
                         ),
-                        child: const Text('Cancel'),
+                        onSelected: (val) {
+                          setState(() {
+                            if (val) {
+                              _selectedKeywords.add(keyword);
+                            } else {
+                              _selectedKeywords.remove(keyword);
+                            }
+                          });
+                        },
+                      );
+                    }).toList(),
+              ),
+              const SizedBox(height: 28),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed:
+                          _isPosting ? null : () => Navigator.of(context).pop(),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
                       ),
+                      child: const Text('Cancel'),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _isPosting ? null : _handlePost,
-                        child:
-                            _isPosting
-                                ? const SizedBox(
-                                  height: 18,
-                                  width: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                )
-                                : const Text('Post'),
-                      ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _isPosting ? null : _handlePost,
+                      child:
+                          _isPosting
+                              ? const SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                              : const Text('Post'),
                     ),
-                  ],
-                ),
-              ],
-            ),
+                  ),
+                ],
+              ),
+            ],
           ),
         ),
-      );
-    }
-
-    @override
-    void dispose() {
-      _captionController.dispose();
-      super.dispose();
-    }
+      ),
+    );
   }
 
+  @override
+  void dispose() {
+    _captionController.dispose();
+    super.dispose();
+  }
+}
