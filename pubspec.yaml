@@ -43,7 +43,7 @@ dependencies:
 
   google_maps_flutter: ^2.9.0
   geolocator: ^13.0.1 #get device location
-  http: ^1.5.0 #make HTTP requests
+  http: ^1.6.0 #make HTTP requests
   geocoding: ^4.0.0 #turns typed text into coordinates
   url_launcher: ^6.3.2 #open links in browser
   permission_handler: ^12.0.1 #handle location permission requests
@@ -51,6 +51,8 @@ dependencies:
   #location: ^4.5.0 #location services
 
   supabase_flutter : ^2.15.4 #supabase client
+  tflite_flutter: ^0.12.1
+  image: ^4.5.4
 
 flutter_native_splash:
   color: "#16337a"
@@ -89,6 +91,8 @@ flutter:
 
   assets:
     - assets/
+    - assets/models/cat_emotion_resnet50v2.tflite
+    - assets/models/dog_emotion_resnet50v2.tflite
 
 flutter_launcher_icons:
   android: true

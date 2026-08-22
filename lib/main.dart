@@ -6,9 +6,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/home_screen.dart';
 import 'screens/admin/admin_home.dart';
 import 'screens/login.dart';
+import 'services/emotion_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await EmotionService.initialize();
 
   // DB (Supabase): initialize 
   // project's URL + anon key.

@@ -1,11 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+
 import '../../models/pet.dart';
 import '../../app_theme.dart';
-import '../../widgets/image_placeholder.dart';
 import '../../widgets/primary_btn.dart';
+import '../../services/pet_service.dart';
 
 class MyPetsScreen extends StatefulWidget {
   const MyPetsScreen({super.key});
@@ -17,19 +19,7 @@ class MyPetsScreen extends StatefulWidget {
 class _MyPetsScreenState extends State<MyPetsScreen> {
   bool _isLoading = false;
 
-  // Placeholder data. DB (Supabase): replace with
-  // SupabaseService.instance.fetchMyPets() in initState.
-  List<Pet> _pets = [
-    Pet(
-      id: 'p1',
-      ownerId: 'u1',
-      name: 'Max',
-      sex: 'Male',
-      age: 3,
-      breed: 'Golden Retriever',
-      description: 'Loves long walks and belly rubs.',
-    ),
-  ];
+  List<Pet> _pets = [];
 
   @override
   void initState() {
@@ -37,149 +27,283 @@ class _MyPetsScreenState extends State<MyPetsScreen> {
     _loadPets();
   }
 
+  // ============================================================
+  // LOAD PETS
+  // ============================================================
+
   Future<void> _loadPets() async {
     setState(() => _isLoading = true);
 
-    // DB (Supabase):
-    // final pets = await SupabaseService.instance.fetchMyPets();
+    try {
+      final pets = await PetService.instance.fetchMyPets();
 
-    await Future.delayed(
-      const Duration(milliseconds: 300),
-    ); // placeholder delay
+      if (!mounted) return;
 
-    if (!mounted) return;
-    setState(() => _isLoading = false);
-    // setState(() => _pets = pets); // uncomment once fetching real data
+      setState(() {
+        _pets = pets;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      setState(() => _isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to load pets: $e',
+          ),
+        ),
+      );
+    }
   }
+
+  // ============================================================
+  // ADD PET
+  // ============================================================
 
   Future<void> _addAnotherPet() async {
     final result = await showDialog<Pet>(
       context: context,
       builder: (context) => const _AddPetDialog(),
     );
+
     if (result == null) return;
 
-    // DB (Supabase):
-    // await SupabaseService.instance.addPet(result);
+    try {
+      final savedPet =
+          await PetService.instance.addPet(result);
 
-    setState(() => _pets = [..._pets, result]);
+      if (!mounted) return;
+
+      setState(() {
+        _pets = [
+          ..._pets,
+          savedPet,
+        ];
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Pet added successfully!',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to add pet: $e',
+          ),
+        ),
+      );
+    }
   }
+
+  // ============================================================
+  // EDIT PET
+  // ============================================================
+
+  Future<void> _editPet(
+    int index,
+  ) async {
+    final result = await showDialog<Pet>(
+      context: context,
+      builder: (_) => _EditPetDialog(
+        pet: _pets[index],
+      ),
+    );
+
+    if (result == null) return;
+
+    try {
+      final updatedPet =
+          await PetService.instance.updatePet(result);
+
+      if (!mounted) return;
+
+      setState(() {
+        _pets = List.of(_pets)
+          ..[index] = updatedPet;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Pet updated successfully!',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to update pet: $e',
+          ),
+        ),
+      );
+    }
+  }
+
+  // ============================================================
+  // DELETE PET
+  // ============================================================
+
+  Future<void> _deletePet(
+    int index,
+  ) async {
+    final pet = _pets[index];
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text(
+          'Delete Pet',
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        content: Text(
+          'Remove ${pet.name}?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () =>
+                Navigator.of(context).pop(false),
+            child: const Text(
+              'Cancel',
+            ),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor:
+                  AppColors.danger,
+            ),
+            onPressed: () =>
+                Navigator.of(context).pop(true),
+            child: const Text(
+              'Delete',
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await PetService.instance.deletePet(
+        pet.id,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _pets = List.of(_pets)
+          ..removeAt(index);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Pet deleted successfully!',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to delete pet: $e',
+          ),
+        ),
+      );
+    }
+  }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('My Pets')),
+      appBar: AppBar(
+        title: const Text(
+          'My Pets',
+        ),
+      ),
       body: SafeArea(
-        child:
-            _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(
-                        child:
-                            _pets.isEmpty
-                                ? const Center(
-                                  child: Text(
-                                    'No pets added yet.',
-                                    style: TextStyle(
-                                      color: AppColors.textSecondary,
-                                    ),
-                                  ),
-                                )
-                                : ListView.separated(
-                                  itemCount: _pets.length,
-                                  separatorBuilder:
-                                      (_, __) => const SizedBox(height: 12),
-                                  itemBuilder:
-                                      (context, i) => _PetCard(
-                                        pet: _pets[i],
-                                        onEdit: () async {
-                                          final result = await showDialog<Pet>(
-                                            context: context,
-                                            builder:
-                                                (_) => _EditPetDialog(
-                                                  pet: _pets[i],
-                                                ),
-                                          );
-                                          if (result == null) return;
-                                          // DB (Supabase): await SupabaseService.instance.updatePet(result);
-                                          setState(
-                                            () =>
-                                                _pets = List.of(_pets)
-                                                  ..[i] = result,
-                                          );
-                                        },
-                                        onDelete: () async {
-                                          final confirmed = await showDialog<
-                                            bool
-                                          >(
-                                            context: context,
-                                            builder:
-                                                (_) => AlertDialog(
-                                                  title: Text(
-                                                    'Delete Pet',
-                                                    style: GoogleFonts.poppins(
-                                                      fontWeight:
-                                                          FontWeight.w700,
-                                                    ),
-                                                  ),
-                                                  content: Text(
-                                                    'Remove ${_pets[i].name}?',
-                                                  ),
-                                                  actions: [
-                                                    TextButton(
-                                                      onPressed:
-                                                          () => Navigator.of(
-                                                            context,
-                                                          ).pop(false),
-                                                      child: const Text(
-                                                        'Cancel',
-                                                      ),
-                                                    ),
-                                                    ElevatedButton(
-                                                      style:
-                                                          ElevatedButton.styleFrom(
-                                                            backgroundColor:
-                                                                AppColors
-                                                                    .danger,
-                                                          ),
-                                                      onPressed:
-                                                          () => Navigator.of(
-                                                            context,
-                                                          ).pop(true),
-                                                      child: const Text(
-                                                        'Delete',
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                          );
-                                          if (confirmed != true) return;
-                                          // DB (Supabase): await SupabaseService.instance.deletePet(_pets[i].id);
-                                          setState(
-                                            () =>
-                                                _pets = List.of(_pets)
-                                                  ..removeAt(i),
-                                          );
-                                        },
-                                      ),
+        child: _isLoading
+            ? const Center(
+                child:
+                    CircularProgressIndicator(),
+              )
+            : Padding(
+                padding:
+                    const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.stretch,
+                  children: [
+                    Expanded(
+                      child: _pets.isEmpty
+                          ? const Center(
+                              child: Text(
+                                'No pets added yet.',
+                                style: TextStyle(
+                                  color: AppColors
+                                      .textSecondary,
                                 ),
-                      ),
-                      const SizedBox(height: 12),
-                      PrimaryButton(
-                        label: '+ Add Another Pet',
-                        onPressed: _addAnotherPet,
-                      ),
-                    ],
-                  ),
+                              ),
+                            )
+                          : ListView.separated(
+                              itemCount:
+                                  _pets.length,
+                              separatorBuilder:
+                                  (_, __) =>
+                                      const SizedBox(
+                                height: 12,
+                              ),
+                              itemBuilder:
+                                  (context, i) {
+                                return _PetCard(
+                                  pet: _pets[i],
+                                  onEdit: () =>
+                                      _editPet(i),
+                                  onDelete: () =>
+                                      _deletePet(i),
+                                );
+                              },
+                            ),
+                    ),
+                    const SizedBox(
+                      height: 12,
+                    ),
+                    PrimaryButton(
+                      label:
+                          '+ Add  Pet',
+                      onPressed:
+                          _addAnotherPet,
+                    ),
+                  ],
                 ),
+              ),
       ),
     );
   }
 }
+
+// =================================================================
+// PET CARD
+// =================================================================
 
 class _PetCard extends StatelessWidget {
   final Pet pet;
@@ -195,63 +319,115 @@ class _PetCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding:
+          const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        border: Border.all(color: AppColors.divider),
-        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: AppColors.divider,
+        ),
+        borderRadius:
+            BorderRadius.circular(10),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment:
+            CrossAxisAlignment.start,
         children: [
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
             children: [
-              ImagePlaceholderBox(
+              // --------------------------------------------------
+              // PET PHOTO
+              // --------------------------------------------------
+
+              _PetImage(
+                pet: pet,
                 height: 50,
                 width: 50,
                 borderRadius: 8,
-                imageFile: pet.imageFile,
               ),
-              const SizedBox(width: 12),
+
+              const SizedBox(
+                width: 12,
+              ),
+
+              // --------------------------------------------------
+              // PET INFORMATION
+              // --------------------------------------------------
+
               Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
                   children: [
                     Text(
                       pet.name,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
+                      style:
+                          const TextStyle(
+                        fontWeight:
+                            FontWeight.w700,
+                      ),
                     ),
                     Text(
                       pet.breed,
-                      style: const TextStyle(
+                      style:
+                          const TextStyle(
                         fontSize: 12,
-                        color: AppColors.textSecondary,
+                        color: AppColors
+                            .textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
+
+              // --------------------------------------------------
+              // EDIT
+              // --------------------------------------------------
+
               IconButton(
                 onPressed: onEdit,
                 icon: const Icon(
                   Icons.edit_outlined,
                   size: 18,
-                  color: AppColors.primary,
+                  color:
+                      AppColors.primary,
                 ),
               ),
+
+              // --------------------------------------------------
+              // DELETE
+              // --------------------------------------------------
+
               IconButton(
                 onPressed: onDelete,
                 icon: const Icon(
                   Icons.delete_outline,
                   size: 18,
-                  color: AppColors.danger,
+                  color:
+                      AppColors.danger,
                 ),
               ),
             ],
           ),
-          if (pet.description != null) ...[
-            const SizedBox(height: 8),
-            Text(pet.description!, style: const TextStyle(fontSize: 12)),
+
+          // ------------------------------------------------------
+          // DESCRIPTION
+          // ------------------------------------------------------
+
+          if (pet.description != null &&
+              pet.description!
+                  .isNotEmpty) ...[
+            const SizedBox(
+              height: 8,
+            ),
+            Text(
+              pet.description!,
+              style:
+                  const TextStyle(
+                fontSize: 12,
+              ),
+            ),
           ],
         ],
       ),
@@ -259,115 +435,340 @@ class _PetCard extends StatelessWidget {
   }
 }
 
-/// Simple dialog used to add a new pet. Kept minimal since the wireframe
-/// only shows the "My Pets" list + "Add Another Pet" button, not a full
-/// add-pet form screen.
-class _AddPetDialog extends StatefulWidget {
+// =================================================================
+// PET IMAGE
+// =================================================================
+
+class _PetImage extends StatelessWidget {
+  final Pet pet;
+  final double height;
+  final double width;
+  final double borderRadius;
+
+  const _PetImage({
+    required this.pet,
+    required this.height,
+    required this.width,
+    required this.borderRadius,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius:
+          BorderRadius.circular(
+        borderRadius,
+      ),
+      child: SizedBox(
+        height: height,
+        width: width,
+        child: _buildImage(),
+      ),
+    );
+  }
+
+  Widget _buildImage() {
+    // Local image selected from gallery.
+    if (pet.imageFile != null) {
+      return Image.file(
+        pet.imageFile!,
+        fit: BoxFit.cover,
+      );
+    }
+
+    // Image already stored in Supabase.
+    if (pet.photoUrl != null &&
+        pet.photoUrl!.isNotEmpty) {
+      return Image.network(
+        pet.photoUrl!,
+        fit: BoxFit.cover,
+        errorBuilder:
+            (_, __, ___) {
+          return Container(
+            color: AppColors.divider,
+            child: const Icon(
+              Icons.pets,
+            ),
+          );
+        },
+        loadingBuilder:
+            (context, child, progress) {
+          if (progress == null) {
+            return child;
+          }
+
+          return Container(
+            color: AppColors.divider,
+            child: const Center(
+              child:
+                  CircularProgressIndicator(
+                strokeWidth: 2,
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    // No image.
+    return Container(
+      color: AppColors.divider,
+      child: const Icon(
+        Icons.pets,
+      ),
+    );
+  }
+}
+
+// =================================================================
+// ADD PET DIALOG
+// =================================================================
+
+class _AddPetDialog
+    extends StatefulWidget {
   const _AddPetDialog();
 
   @override
-  State<_AddPetDialog> createState() => _AddPetDialogState();
+  State<_AddPetDialog> createState() =>
+      _AddPetDialogState();
 }
 
-class _AddPetDialogState extends State<_AddPetDialog> {
-  final _nameController = TextEditingController();
-  final _breedController = TextEditingController();
-  final _descriptionController = TextEditingController();
-  final _sexController = TextEditingController();
-  final _ageController = TextEditingController();
+class _AddPetDialogState
+    extends State<_AddPetDialog> {
+  final _nameController =
+      TextEditingController();
+
+  final _breedController =
+      TextEditingController();
+
+  final _descriptionController =
+      TextEditingController();
+
+  final _sexController =
+      TextEditingController();
+
+  final _ageController =
+      TextEditingController();
+
   File? _imageFile;
 
+  // ============================================================
+  // PICK IMAGE
+  // ============================================================
+
   Future<void> _pickImage() async {
-    final picked = await ImagePicker().pickImage(
+    final picked =
+        await ImagePicker().pickImage(
       source: ImageSource.gallery,
       imageQuality: 80,
     );
-    if (picked != null) setState(() => _imageFile = File(picked.path));
+
+    if (picked != null) {
+      setState(() {
+        _imageFile =
+            File(picked.path);
+      });
+    }
   }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Add Another Pet'),
+      title: const Text(
+        'Add Pet',
+      ),
       content: SingleChildScrollView(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize:
+              MainAxisSize.min,
           children: [
+            // ----------------------------------------------------
+            // PHOTO
+            // ----------------------------------------------------
+
             GestureDetector(
               onTap: _pickImage,
-              child: ImagePlaceholderBox(
+              child: _LocalImagePreview(
+                imageFile: _imageFile,
                 height: 80,
                 width: 80,
-                borderRadius: 8,
-                imageFile: _imageFile,
-                icon: Icons.add_a_photo_outlined,
               ),
             ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(hintText: 'Pet name'),
+
+            const SizedBox(
+              height: 10,
             ),
-            const SizedBox(height: 10),
+
+            // ----------------------------------------------------
+            // NAME
+            // ----------------------------------------------------
+
             TextField(
-              controller: _breedController,
-              decoration: const InputDecoration(hintText: 'Breed'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _sexController,
-              decoration: const InputDecoration(
-                hintText: 'Sex (e.g. Male / Female)',
+              controller:
+                  _nameController,
+              decoration:
+                  const InputDecoration(
+                hintText:
+                    'Pet name',
               ),
             ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _ageController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(hintText: 'Age'),
+
+            const SizedBox(
+              height: 10,
             ),
-            const SizedBox(height: 10),
+
+            // ----------------------------------------------------
+            // BREED
+            // ----------------------------------------------------
+
             TextField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                hintText: 'Description (optional)',
+              controller:
+                  _breedController,
+              decoration:
+                  const InputDecoration(
+                hintText:
+                    'Breed',
+              ),
+            ),
+
+            const SizedBox(
+              height: 10,
+            ),
+
+            // ----------------------------------------------------
+            // SEX
+            // ----------------------------------------------------
+
+            TextField(
+              controller:
+                  _sexController,
+              decoration:
+                  const InputDecoration(
+                hintText:
+                    'Sex (e.g. Male / Female)',
+              ),
+            ),
+
+            const SizedBox(
+              height: 10,
+            ),
+
+            // ----------------------------------------------------
+            // AGE
+            // ----------------------------------------------------
+
+            TextField(
+              controller:
+                  _ageController,
+              keyboardType:
+                  TextInputType.number,
+              decoration:
+                  const InputDecoration(
+                hintText:
+                    'Age',
+              ),
+            ),
+
+            const SizedBox(
+              height: 10,
+            ),
+
+            // ----------------------------------------------------
+            // DESCRIPTION
+            // ----------------------------------------------------
+
+            TextField(
+              controller:
+                  _descriptionController,
+              decoration:
+                  const InputDecoration(
+                hintText:
+                    'Description (optional)',
               ),
               maxLines: 2,
             ),
           ],
         ),
       ),
+
+      // ----------------------------------------------------------
+      // ACTIONS
+      // ----------------------------------------------------------
+
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          onPressed: () =>
+              Navigator.of(
+                context,
+              ).pop(),
+          child: const Text(
+            'Cancel',
+          ),
         ),
+
         ElevatedButton(
-          onPressed: () {
-            if (_nameController.text.trim().isEmpty ||
-                _breedController.text.trim().isEmpty ||
-                _sexController.text.trim().isEmpty ||
-                _ageController.text.trim().isEmpty)
-              return;
-            Navigator.of(context).pop(
-              Pet(
-                id: DateTime.now().millisecondsSinceEpoch.toString(),
-                ownerId: 'u1',
-                name: _nameController.text.trim(),
-                breed: _breedController.text.trim(),
-                sex: _sexController.text.trim(),
-                age: int.tryParse(_ageController.text.trim()) ?? 0,
-                imageFile: _imageFile,
-                description:
-                    _descriptionController.text.trim().isEmpty
-                        ? null
-                        : _descriptionController.text.trim(),
-              ),
-            );
-          },
-          child: const Text('Add'),
+          onPressed: _addPet,
+          child: const Text(
+            'Add',
+          ),
         ),
       ],
+    );
+  }
+
+  // ============================================================
+  // ADD PET
+  // ============================================================
+
+  void _addPet() {
+    if (_nameController.text
+            .trim()
+            .isEmpty ||
+        _breedController.text
+            .trim()
+            .isEmpty ||
+        _sexController.text
+            .trim()
+            .isEmpty ||
+        _ageController.text
+            .trim()
+            .isEmpty) {
+      return;
+    }
+
+    Navigator.of(context).pop(
+      Pet(
+        // PetService generates the UUID.
+        id: '',
+        ownerId: '',
+        name:
+            _nameController.text.trim(),
+        breed:
+            _breedController.text.trim(),
+        sex:
+            _sexController.text.trim(),
+        age:
+            int.tryParse(
+              _ageController.text
+                  .trim(),
+            ) ??
+            0,
+        imageFile:
+            _imageFile,
+        description:
+            _descriptionController
+                    .text
+                    .trim()
+                    .isEmpty
+                ? null
+                : _descriptionController
+                    .text
+                    .trim(),
+      ),
     );
   }
 
@@ -377,135 +778,324 @@ class _AddPetDialogState extends State<_AddPetDialog> {
     _breedController.dispose();
     _sexController.dispose();
     _ageController.dispose();
-    _descriptionController.dispose();
+    _descriptionController
+        .dispose();
+
     super.dispose();
   }
 }
 
-class _EditPetDialog extends StatefulWidget {
+// =================================================================
+// EDIT PET DIALOG
+// =================================================================
+
+class _EditPetDialog
+    extends StatefulWidget {
   final Pet pet;
-  const _EditPetDialog({required this.pet});
+
+  const _EditPetDialog({
+    required this.pet,
+  });
 
   @override
-  State<_EditPetDialog> createState() => _EditPetDialogState();
+  State<_EditPetDialog> createState() =>
+      _EditPetDialogState();
 }
 
-class _EditPetDialogState extends State<_EditPetDialog> {
-  late final TextEditingController _nameController;
-  late final TextEditingController _breedController;
-  late final TextEditingController _sexController;
-  late final TextEditingController _ageController;
-  late final TextEditingController _descriptionController;
+class _EditPetDialogState
+    extends State<_EditPetDialog> {
+  late final TextEditingController
+      _nameController;
+
+  late final TextEditingController
+      _breedController;
+
+  late final TextEditingController
+      _sexController;
+
+  late final TextEditingController
+      _ageController;
+
+  late final TextEditingController
+      _descriptionController;
+
   File? _imageFile;
 
-  Future<void> _pickImage() async {
-    final picked = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-    );
-    if (picked != null) setState(() => _imageFile = File(picked.path));
-  }
+  // ============================================================
+  // INIT
+  // ============================================================
 
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.pet.name);
-    _breedController = TextEditingController(text: widget.pet.breed);
-    _sexController = TextEditingController(text: widget.pet.sex);
-    _ageController = TextEditingController(text: widget.pet.age.toString());
-    _descriptionController = TextEditingController(
-      text: widget.pet.description ?? '',
+
+    _nameController =
+        TextEditingController(
+      text: widget.pet.name,
     );
-    _imageFile = widget.pet.imageFile;
+
+    _breedController =
+        TextEditingController(
+      text: widget.pet.breed,
+    );
+
+    _sexController =
+        TextEditingController(
+      text: widget.pet.sex,
+    );
+
+    _ageController =
+        TextEditingController(
+      text: widget.pet.age.toString(),
+    );
+
+    _descriptionController =
+        TextEditingController(
+      text:
+          widget.pet.description ?? '',
+    );
+
+    _imageFile =
+        widget.pet.imageFile;
   }
+
+  // ============================================================
+  // PICK IMAGE
+  // ============================================================
+
+  Future<void> _pickImage() async {
+    final picked =
+        await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 80,
+    );
+
+    if (picked != null) {
+      setState(() {
+        _imageFile =
+            File(picked.path);
+      });
+    }
+  }
+
+  // ============================================================
+  // BUILD
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: Text(
         'Edit Pet',
-        style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
+        style:
+            GoogleFonts.poppins(
+          fontWeight:
+              FontWeight.w700,
+        ),
       ),
-      content: SingleChildScrollView(
+
+      content:
+          SingleChildScrollView(
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisSize:
+              MainAxisSize.min,
           children: [
-            const SizedBox(height: 8),
+            const SizedBox(
+              height: 8,
+            ),
+
+            // ----------------------------------------------------
+            // PHOTO
+            // ----------------------------------------------------
+
             GestureDetector(
               onTap: _pickImage,
-              child: ImagePlaceholderBox(
-                height: 80,
-                width: 80,
-                borderRadius: 8,
-                imageFile: _imageFile,
-                icon: Icons.add_a_photo_outlined,
+              child:
+                  _EditPetImagePreview(
+                imageFile:
+                    _imageFile,
+                photoUrl:
+                    widget.pet.photoUrl,
               ),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(labelText: 'Pet name'),
+
+            const SizedBox(
+              height: 12,
             ),
-            const SizedBox(height: 12),
+
+            // ----------------------------------------------------
+            // NAME
+            // ----------------------------------------------------
+
             TextField(
-              controller: _breedController,
-              decoration: const InputDecoration(labelText: 'Breed'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _sexController,
-              decoration: const InputDecoration(
-                labelText: 'Sex (e.g. Male / Female)',
+              controller:
+                  _nameController,
+              decoration:
+                  const InputDecoration(
+                labelText:
+                    'Pet name',
               ),
             ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _ageController,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Age'),
+
+            const SizedBox(
+              height: 12,
             ),
-            const SizedBox(height: 12),
+
+            // ----------------------------------------------------
+            // BREED
+            // ----------------------------------------------------
+
             TextField(
-              controller: _descriptionController,
-              decoration: const InputDecoration(
-                labelText: 'Description (optional)',
+              controller:
+                  _breedController,
+              decoration:
+                  const InputDecoration(
+                labelText:
+                    'Breed',
+              ),
+            ),
+
+            const SizedBox(
+              height: 12,
+            ),
+
+            // ----------------------------------------------------
+            // SEX
+            // ----------------------------------------------------
+
+            TextField(
+              controller:
+                  _sexController,
+              decoration:
+                  const InputDecoration(
+                labelText:
+                    'Sex (e.g. Male / Female)',
+              ),
+            ),
+
+            const SizedBox(
+              height: 12,
+            ),
+
+            // ----------------------------------------------------
+            // AGE
+            // ----------------------------------------------------
+
+            TextField(
+              controller:
+                  _ageController,
+              keyboardType:
+                  TextInputType.number,
+              decoration:
+                  const InputDecoration(
+                labelText:
+                    'Age',
+              ),
+            ),
+
+            const SizedBox(
+              height: 12,
+            ),
+
+            // ----------------------------------------------------
+            // DESCRIPTION
+            // ----------------------------------------------------
+
+            TextField(
+              controller:
+                  _descriptionController,
+              decoration:
+                  const InputDecoration(
+                labelText:
+                    'Description (optional)',
               ),
               maxLines: 2,
             ),
           ],
         ),
       ),
+
+      // ----------------------------------------------------------
+      // ACTIONS
+      // ----------------------------------------------------------
+
       actions: [
         TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
+          onPressed: () =>
+              Navigator.of(
+                context,
+              ).pop(),
+          child: const Text(
+            'Cancel',
+          ),
         ),
+
         ElevatedButton(
-          onPressed: () {
-            if (_nameController.text.trim().isEmpty ||
-                _breedController.text.trim().isEmpty ||
-                _sexController.text.trim().isEmpty ||
-                _ageController.text.trim().isEmpty)
-              return;
-            Navigator.of(context).pop(
-              Pet(
-                id: widget.pet.id,
-                ownerId: widget.pet.ownerId,
-                name: _nameController.text.trim(),
-                breed: _breedController.text.trim(),
-                sex: _sexController.text.trim(),
-                age: int.tryParse(_ageController.text.trim()) ?? widget.pet.age,
-                imageFile: _imageFile,
-                description:
-                    _descriptionController.text.trim().isEmpty
-                        ? null
-                        : _descriptionController.text.trim(),
-              ),
-            );
-          },
-          child: const Text('Save'),
+          onPressed: _savePet,
+          child: const Text(
+            'Save',
+          ),
         ),
       ],
+    );
+  }
+
+  // ============================================================
+  // SAVE
+  // ============================================================
+
+  void _savePet() {
+    if (_nameController.text
+            .trim()
+            .isEmpty ||
+        _breedController.text
+            .trim()
+            .isEmpty ||
+        _sexController.text
+            .trim()
+            .isEmpty ||
+        _ageController.text
+            .trim()
+            .isEmpty) {
+      return;
+    }
+
+    Navigator.of(context).pop(
+      Pet(
+        id: widget.pet.id,
+        ownerId:
+            widget.pet.ownerId,
+        name:
+            _nameController.text.trim(),
+        breed:
+            _breedController.text.trim(),
+        sex:
+            _sexController.text.trim(),
+        age:
+            int.tryParse(
+              _ageController.text
+                  .trim(),
+            ) ??
+            widget.pet.age,
+        imageFile:
+            _imageFile,
+
+        // Keep the old Supabase
+        // photo URL if the user
+        // doesn't select a new image.
+        photoUrl:
+            widget.pet.photoUrl,
+
+        description:
+            _descriptionController
+                    .text
+                    .trim()
+                    .isEmpty
+                ? null
+                : _descriptionController
+                    .text
+                    .trim(),
+      ),
     );
   }
 
@@ -515,7 +1105,108 @@ class _EditPetDialogState extends State<_EditPetDialog> {
     _breedController.dispose();
     _sexController.dispose();
     _ageController.dispose();
-    _descriptionController.dispose();
+    _descriptionController
+        .dispose();
+
     super.dispose();
+  }
+}
+
+// =================================================================
+// LOCAL IMAGE PREVIEW
+// =================================================================
+
+class _LocalImagePreview
+    extends StatelessWidget {
+  final File? imageFile;
+  final double height;
+  final double width;
+
+  const _LocalImagePreview({
+    required this.imageFile,
+    required this.height,
+    required this.width,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius:
+          BorderRadius.circular(8),
+      child: Container(
+        height: height,
+        width: width,
+        color: AppColors.divider,
+        child: imageFile != null
+            ? Image.file(
+                imageFile!,
+                fit: BoxFit.cover,
+              )
+            : const Icon(
+                Icons
+                    .add_a_photo_outlined,
+              ),
+      ),
+    );
+  }
+}
+
+// =================================================================
+// EDIT PET IMAGE PREVIEW
+// =================================================================
+
+class _EditPetImagePreview
+    extends StatelessWidget {
+  final File? imageFile;
+  final String? photoUrl;
+
+  const _EditPetImagePreview({
+    required this.imageFile,
+    required this.photoUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius:
+          BorderRadius.circular(8),
+      child: Container(
+        height: 80,
+        width: 80,
+        color: AppColors.divider,
+        child: _buildImage(),
+      ),
+    );
+  }
+
+  Widget _buildImage() {
+    // Newly selected local image.
+    if (imageFile != null) {
+      return Image.file(
+        imageFile!,
+        fit: BoxFit.cover,
+      );
+    }
+
+    // Existing Supabase image.
+    if (photoUrl != null &&
+        photoUrl!.isNotEmpty) {
+      return Image.network(
+        photoUrl!,
+        fit: BoxFit.cover,
+        errorBuilder:
+            (_, __, ___) {
+          return const Icon(
+            Icons
+                .add_a_photo_outlined,
+          );
+        },
+      );
+    }
+
+    // No image.
+    return const Icon(
+      Icons.add_a_photo_outlined,
+    );
   }
 }

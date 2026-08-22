@@ -24,6 +24,21 @@ class Pet {
     this.imageFile,
   });
 
+  factory Pet.fromJson(Map<String, dynamic> json) {
+    return Pet(
+      id: json['id'].toString(),
+      ownerId: json['userID'].toString(),
+      name: json['petName'] ?? '',
+      breed: json['petBreed'] ?? '',
+      sex: json['petSex'] ?? '',
+      age: (json['petAge'] as num?)?.toInt() ?? 0,
+      description: json['petDescription'],
+      photoUrl: json['petPhotoUrl'],
+      imageFile: null,
+    );
+  }
+}
+
   // ---------------------------------------------------------------------
   // DB (Supabase) — maps to a future `pets` table: id, owner_id, name,
   // breed, description, photo_url, created_at.
@@ -48,4 +63,3 @@ class Pet {
   //     'photo_url': photoUrl,
   //   };
   // }
-}

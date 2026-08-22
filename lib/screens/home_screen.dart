@@ -8,6 +8,8 @@ import 'profile_screen.dart';
 import 'notifications_screen.dart';
 import 'upload_post.dart';
 import 'view_clinics.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'comments.dart';
 
 /// Root shell shown right after login. Holds the bottom nav and swaps
 /// between the 4 real tabs (the 5th "slot" is the "+" button, which opens
@@ -32,23 +34,23 @@ class _HomeScreenState extends State<HomeScreen> {
   // ];
 
   Widget _buildPage() {
-  switch (_navIndex) {
-    case 0:
-      return const _HomeFeedTab();
+    switch (_navIndex) {
+      case 0:
+        return const _HomeFeedTab();
 
-    case 1:
-      return const AiEmotionScreen();
+      case 1:
+        return const AiEmotionScreen();
 
-    case 3:
-      return const ViewClinic();
+      case 3:
+        return const ViewClinic();
 
-    case 4:
-      return const ProfileScreen();
+      case 4:
+        return const ProfileScreen();
 
-    default:
-      return const SizedBox.shrink();
+      default:
+        return const SizedBox.shrink();
+    }
   }
-}
 
   void _onNavTap(int index) {
     if (index == 2) return; // "+" handled by onAddTap, not a real tab
@@ -58,9 +60,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: SafeArea(
-        child: _buildPage()
-        ),
+      body: SafeArea(child: _buildPage()),
       bottomNavigationBar: SafeArea(
         child: CustomBottomNav(
           currentIndex: _navIndex,
@@ -76,7 +76,14 @@ class _HomeScreenState extends State<HomeScreen> {
 // HOME / COMMUNITY FEED TAB
 // ---------------------------------------------------------------------------
 
-const _filterOptions = ['All', 'Discussion', 'Cats', 'Adoption', 'Rescue', 'Dogs'];
+const _filterOptions = [
+  'All',
+  'Discussion',
+  'Cats',
+  'Adoption',
+  'Rescue',
+  'Dogs',
+];
 
 class _HomeFeedTab extends StatefulWidget {
   const _HomeFeedTab();
@@ -88,29 +95,130 @@ class _HomeFeedTab extends StatefulWidget {
 class _HomeFeedTabState extends State<_HomeFeedTab> {
   String _selectedFilter = 'All';
   bool _isLoading = false;
-  List<Post> _posts = _placeholderPosts;
+  List<Post> _posts = [];
 
   Future<void> _applyFilter(String filter) async {
     setState(() {
       _selectedFilter = filter;
+    });
+
+    await _fetchPosts();
+  }
+
+  // DB (Supabase):
+  // final posts = await SupabaseService.instance.fetchPosts(
+  //   keywordFilter: filter,
+  // );
+
+  Future<void> _fetchPosts() async {
+    setState(() {
       _isLoading = true;
     });
 
-    // DB (Supabase):
-    // final posts = await SupabaseService.instance.fetchPosts(
-    //   keywordFilter: filter,
-    // );
+    try {
+      final supabase = Supabase.instance.client;
 
-    await Future.delayed(const Duration(milliseconds: 300)); // placeholder delay
-    final posts = filter == 'All'
-        ? _placeholderPosts
-        : _placeholderPosts.where((p) => p.keywords.contains(filter)).toList();
+      final data = await supabase
+          .from('Post')
+          .select('''
+              postID,
+              userID,
+              caption,
+              created_at,
+              profiles (
+                username,
+                profilePhotoUrl
+              ),
+              PostImages (
+                imageID,
+                photoUrl
+              ),
+               PostReactions (
+                reactionID,
+                userID
+              ),
+               PostComments (
+                commentID
+              )
+            ''')
+          .order('created_at', ascending: false);
 
-    if (!mounted) return;
-    setState(() {
-      _posts = posts;
-      _isLoading = false;
-    });
+      print('Fetched posts: $data');
+
+      final posts =
+          data.map<Post>((row) {
+            final profile = row['profiles'];
+            final comments = row['PostComments'] ?? [];
+            final reactions = row['PostReactions'] ?? [];
+            final likeCount = reactions.length;
+            final currentUser = supabase.auth.currentUser;
+
+            final isLiked =
+                currentUser != null &&
+                reactions.any(
+                  (reaction) => reaction['userID'] == currentUser.id,
+                );
+
+            final List<String> imageUrls = [];
+
+            final images = row['PostImages'];
+
+            if (images != null) {
+              for (final image in images) {
+                if (image['photoUrl'] != null) {
+                  imageUrls.add(image['photoUrl'].toString());
+                }
+              }
+            }
+
+            return Post(
+              id: row['postID'].toString(),
+              authorId: row['userID'].toString(),
+              authorName:
+                  profile != null
+                      ? profile['username']?.toString() ?? 'Unknown User'
+                      : 'Unknown User',
+              authorAvatarUrl:
+                  profile != null
+                      ? profile['profilePhotoUrl']?.toString()
+                      : null,
+              caption: row['caption']?.toString(),
+              imageUrl: imageUrls,
+              isLiked: isLiked,
+              likeCount: reactions.length,
+              commentCount: comments.length,
+              createdAt: DateTime.parse(row['created_at'].toString()),
+            );
+          }).toList();
+
+      print('Converted posts: $posts');
+
+      if (!mounted) return;
+
+      setState(() {
+        _posts = posts;
+        _isLoading = false;
+      });
+    } catch (e, stackTrace) {
+      print('Error fetching posts: $e');
+      print(stackTrace);
+
+      if (!mounted) return;
+
+      setState(() {
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load posts: $e')));
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchPosts();
   }
 
   @override
@@ -119,16 +227,25 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 8),
+          padding: const EdgeInsets.fromLTRB(20, 18, 20, 8),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Community Post', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+              const Text(
+                'Community Post',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+              ),
               IconButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                onPressed:
+                    () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationsScreen(),
+                      ),
+                    ),
+                icon: const Icon(
+                  Icons.notifications_outlined,
+                  color: AppColors.primary,
                 ),
-                icon: const Icon(Icons.notifications_outlined, color: AppColors.primary),
               ),
             ],
           ),
@@ -152,120 +269,234 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
                 labelStyle: TextStyle(
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
-                  color: selected ? AppColors.textPrimary : AppColors.textSecondary,
+                  color:
+                      selected
+                          ? AppColors.textPrimary
+                          : AppColors.textSecondary,
                 ),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
               );
             },
           ),
         ),
         const SizedBox(height: 10),
         Expanded(
-          child: _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : RefreshIndicator(
-                  onRefresh: () => _applyFilter(_selectedFilter),
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                    itemCount: _posts.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 18),
-                    itemBuilder: (context, i) => _PostCard(post: _posts[i]),
+          child:
+              _isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : RefreshIndicator(
+                    onRefresh: () => _applyFilter(_selectedFilter),
+                    child: ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                      itemCount: _posts.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 18),
+                      itemBuilder: (context, i) => _PostCard(post: _posts[i]),
+                    ),
                   ),
-                ),
         ),
       ],
     );
   }
 }
 
-class _PostCard extends StatelessWidget {
+class _PostCard extends StatefulWidget {
   final Post post;
 
   const _PostCard({required this.post});
+
+  @override
+  State<_PostCard> createState() => _PostCardState();
+}
+
+class _PostCardState extends State<_PostCard> {
+  bool _isLiked = false;
+  int _likeCount = 0;
+  int _commentCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _isLiked = widget.post.isLiked;
+    _likeCount = widget.post.likeCount;
+    _commentCount = widget.post.commentCount;
+  }
+
+  Future<void> _toggleLike() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+
+    if (user == null) return;
+
+    try {
+      if (_isLiked) {
+        // Unlike
+        await supabase
+            .from('PostReactions')
+            .delete()
+            .eq('postID', widget.post.id)
+            .eq('userID', user.id);
+
+        setState(() {
+          _isLiked = false;
+          _likeCount--;
+        });
+      } else {
+        // Like
+        await supabase.from('PostReactions').insert({
+          'postID': widget.post.id,
+          'userID': user.id,
+        });
+
+        setState(() {
+          _isLiked = true;
+          _likeCount++;
+        });
+      }
+    } catch (e) {
+      print('Error toggling like: $e');
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to update like: $e')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (post.authorName.isNotEmpty)
+        // USERNAME
+        if (widget.post.authorName.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 8),
             child: Row(
               children: [
-                const CircleAvatar(
+                //profile pic
+                CircleAvatar(
                   radius: 14,
                   backgroundColor: AppColors.placeholder,
-                  child: Icon(Icons.person, size: 16, color: AppColors.textSecondary),
+                  backgroundImage:
+                      widget.post.authorAvatarUrl != null &&
+                              widget.post.authorAvatarUrl!.isNotEmpty
+                          ? NetworkImage(widget.post.authorAvatarUrl!)
+                          : null,
+                  child:
+                      widget.post.authorAvatarUrl == null ||
+                              widget.post.authorAvatarUrl!.isEmpty
+                          ? const Icon(
+                            Icons.person,
+                            size: 16,
+                            color: AppColors.textSecondary,
+                          )
+                          : null,
                 ),
                 const SizedBox(width: 8),
-                Text(post.authorName, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                Text(
+                  widget.post.authorName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
               ],
             ),
           ),
-        const ImagePlaceholderBox(height: 140),
+
+        // IMAGES
+        if (widget.post.imageUrl.isNotEmpty)
+          SizedBox(
+            height: 250,
+            child: PageView.builder(
+              itemCount: widget.post.imageUrl.length,
+              itemBuilder: (context, index) {
+                return ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: Image.network(
+                    widget.post.imageUrl[index],
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const ImagePlaceholderBox(height: 250);
+                    },
+                  ),
+                );
+              },
+            ),
+          )
+        else
+          const ImagePlaceholderBox(height: 140),
+
         const SizedBox(height: 6),
-        // Thin accent bar under the image — matches the blue strip in the
-        // wireframe (can be repurposed as a "seen/unseen" or category marker).
-        Container(height: 4, width: 60, color: AppColors.primary),
-        if (post.caption != null) ...[
+
+        // // ACCENT BAR
+        // Container(
+        //   height: 4,
+        //   width: 60,
+        //   color: AppColors.primary,
+        // ),
+
+        // CAPTION
+        if (widget.post.caption != null &&
+            widget.post.caption!.trim().isNotEmpty) ...[
           const SizedBox(height: 8),
-          Text(post.caption!, style: const TextStyle(fontSize: 13)),
+          Text(widget.post.caption!, style: const TextStyle(fontSize: 13)),
         ],
-        const SizedBox(height: 6),
-        Text(
-          '${post.likeCount} Likes · ${post.commentCount} Comment${post.commentCount == 1 ? '' : 's'}',
-          style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+
+        //const SizedBox(height: 6),
+
+        // LIKES / COMMENTS
+        Transform.translate(
+          offset: const Offset(-10, 0),
+          child: Row(
+            children: [
+              IconButton(
+                onPressed: _toggleLike,
+                icon: Icon(
+                  _isLiked ? Icons.favorite : Icons.favorite_border,
+                  color: _isLiked ? Colors.red : AppColors.textSecondary,
+                ),
+              ),
+              Text(
+                '$_likeCount Likes',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+
+              const SizedBox(width: 16),
+
+             IconButton(
+              onPressed: () async {
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => Comments(
+                      postId: widget.post.id,
+                    ),
+                  ),
+                );
+              },
+              icon: const Icon(
+                Icons.comment_outlined,
+                color: AppColors.textSecondary,
+              ),
+            ),
+
+              Text(
+                '${widget.post.commentCount} Comments',
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 }
-
-// Placeholder data so the feed isn't empty before Supabase is wired up.
-// DB (Supabase): delete this once _HomeFeedTabState._applyFilter fetches
-// real posts.
-final _placeholderPosts = [
-  Post(
-    id: '1',
-    authorId: 'u1',
-    authorName: 'Jiah Mashaal',
-    caption: 'Max had the best day at the park today! 🐾',
-    keywords: const ['Discussion', 'Dogs'],
-    likeCount: 12,
-    commentCount: 1,
-    createdAt: DateTime.now(),
-  ),
-  Post(
-    id: '2',
-    authorId: 'u2',
-    authorName: 'John Doe',
-    caption: 'Looking to adopt — any recommendations near me?',
-    keywords: const ['Adoption', 'Cats'],
-    likeCount: 5,
-    commentCount: 3,
-    createdAt: DateTime.now(),
-  ),
-];
-
-// // ---------------------------------------------------------------------------
-// // VIEW NEARBY CLINICS TAB
-// // ---------------------------------------------------------------------------
-
-// class _ClinicPlaceholderTab extends StatelessWidget {
-//   const _ClinicPlaceholderTab();
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return const Center(
-//       child: Padding(
-//         padding: EdgeInsets.all(24),
-//         child: Text(
-//           'View Nearby Clinics tab coming soon.',
-//           textAlign: TextAlign.center,
-//           style: TextStyle(color: AppColors.textSecondary),
-//         ),
-//       ),
-//     );
-//   }
-// }
