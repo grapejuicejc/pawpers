@@ -11,6 +11,7 @@ class Post {
   final int commentCount;
   final DateTime createdAt;
   final bool isLiked;
+  final List<String> categories;
 
   Post({
     required this.id,
@@ -24,6 +25,7 @@ class Post {
     this.commentCount = 0,
     required this.createdAt,
     this.isLiked = false,
+    required this.categories,
   });
 
   //DATABASE

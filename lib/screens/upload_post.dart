@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'report_stray.dart';
+import 'home_screen.dart';
 
 /// Bottom sheet shown when the user taps the "+" tab.
 /// Matches the "UPLOAD POST SCREEN" wireframe: dimmed background with
@@ -36,13 +37,21 @@ Future<void> showUploadActionSheet(BuildContext context) {
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
                   subtitle: const Text('Share with the community'),
-                  onTap: () {
+                  onTap: () async {
                     Navigator.of(context).pop();
-                    Navigator.of(context).push(
+                    await Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => const CreatePostScreen(),
                       ),
                     );
+                      if (context.mounted) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (_) => const HomeScreen(),
+                        ),
+                        (route) => false,
+                      );
+                    }
                   },
                 ),
                 const Divider(height: 1),
@@ -59,13 +68,21 @@ Future<void> showUploadActionSheet(BuildContext context) {
                     ),
                   ),
                   subtitle: const Text('Help a pet in need'),
-                  onTap: () {
+                  onTap: () async {
                     Navigator.of(context).pop();
-                    Navigator.of(context).push(
+
+                    await Navigator.of(context).push(
                       MaterialPageRoute(
                         builder: (_) => const ReportStrayScreen(),
                       ),
                     );
+
+                    if (context.mounted) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const HomeScreen()),
+                        (route) => false,
+                      );
+                    }
                   },
                 ),
               ],
@@ -183,6 +200,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               .insert({
                 'userID': user.id,
                 'caption': _captionController.text.trim(),
+                'category': _selectedKeywords.toList(),
               })
               .select()
               .single();
@@ -246,10 +264,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
       if (!mounted) return;
 
       setState(() => _isPosting = false);
-      Navigator.of(context).pop();
 
-      if (!mounted) return;
-      setState(() => _isPosting = false);
 
       ScaffoldMessenger.of(
         context,

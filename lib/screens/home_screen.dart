@@ -12,6 +12,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'comments.dart';
 import '../models/stray_report.dart';
 import 'report_stray.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'stray_report_comments.dart';
+import 'stray_report_details.dart';
+
 
 /// Root shell shown right after login. Holds the bottom nav and swaps
 /// between the 4 real tabs (the 5th "slot" is the "+" button, which opens
@@ -81,10 +85,12 @@ class _HomeScreenState extends State<HomeScreen> {
 const _filterOptions = [
   'All',
   'Discussion',
-  'Cats',
+  'Advice',
+  'Cat',
+  'Dog',
+  'Missing',
   'Adoption',
-  'Rescue',
-  'Dogs',
+  'Lost & Found',
 ];
 
 class _HomeFeedTab extends StatefulWidget {
@@ -124,30 +130,45 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
     try {
       final supabase = Supabase.instance.client;
 
-      final data = await supabase
-          .from('Post')
-          .select('''
-              postID,
-              userID,
-              caption,
-              created_at,
-              profiles (
-                username,
-                profilePhotoUrl
-              ),
-              PostImages (
-                imageID,
-                photoUrl
-              ),
-               PostReactions (
-                reactionID,
-                userID
-              ),
-               PostComments (
-                commentID
-              )
-            ''')
-          .order('created_at', ascending: false);
+      final query = supabase.from('Post').select('''
+          postID,
+          userID,
+          caption,
+          category,
+          created_at,
+
+          profiles (
+            username,
+            profilePhotoUrl
+          ),
+
+          PostImages (
+            imageID,
+            photoUrl
+          ),
+
+          PostReactions (
+            reactionID,
+            userID
+          ),
+
+          PostComments (
+            commentID
+          )
+        ''');
+
+        final data =
+            _selectedFilter == 'All'
+                ? await query.order(
+                    'created_at',
+                    ascending: false,
+                  )
+                : await query
+                    .contains('category', [_selectedFilter])
+                    .order(
+                      'created_at',
+                      ascending: false,
+                    );
 
       print('Fetched posts: $data');
 
@@ -192,6 +213,12 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
               imageUrl: imageUrls,
               isLiked: isLiked,
               likeCount: reactions.length,
+              
+              categories:
+                (row['category'] as List?)
+                    ?.map((e) => e.toString())
+                    .toList() ??
+                [],
               commentCount: comments.length,
               createdAt: DateTime.parse(row['created_at'].toString()),
             );
@@ -227,74 +254,103 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
     _fetchPosts();
   }
 
-    Future<void> _fetchStrayReports() async {
+  Future<void> _fetchStrayReports() async {
+  setState(() {
+    _isStrayLoading = true;
+  });
+
+  try {
+    final supabase = Supabase.instance.client;
+
+    final data = await supabase
+        .from('StrayReports')
+        .select('''
+          strayID,
+          userID,
+          description,
+          latitude,
+          longitude,
+          location,
+          status,
+          created_at,
+
+          profiles (
+            username,
+            profilePhotoUrl
+          ),
+
+          StrayReportImages (
+            imageID,
+            photoUrl
+          ),
+
+          StrayReportReactions (
+            reactionID,
+            userID
+          ),
+
+          StrayReportComments (
+            commentID,
+            userID,
+            comment,
+            created_at
+          )
+        ''')
+        .order('created_at', ascending: false);
+
+    print('Fetched stray reports: $data');
+
+    final currentUser = supabase.auth.currentUser;
+
+    final reports = data.map<StrayReport>((row) {
+      final reactions =
+          row['StrayReportReactions'] as List? ?? [];
+
+      final comments =
+          row['StrayReportComments'] as List? ?? [];
+
+      final isLiked =
+          currentUser != null &&
+          reactions.any(
+            (reaction) =>
+                reaction['userID'] == currentUser.id,
+          );
+
+      return StrayReport.fromJson(
+        row,
+        isLiked: isLiked,
+        likeCount: reactions.length,
+        commentCount: comments.length,
+      );
+    }).toList();
+
+    print('Converted stray reports: $reports');
+
+    if (!mounted) return;
+
     setState(() {
-      _isStrayLoading = true;
+      _strayReports = reports;
+      _isStrayLoading = false;
+    });
+  } catch (e, stackTrace) {
+    print('Error fetching stray reports: $e');
+    print(stackTrace);
+
+    if (!mounted) return;
+
+    setState(() {
+      _isStrayLoading = false;
     });
 
-    try {
-      final supabase = Supabase.instance.client;
-
-      final data = await supabase
-          .from('StrayReports')
-          .select('''
-            strayID,
-            userID,
-            description,
-            latitude,
-            longitude,
-            location,
-            status,
-            created_at,
-
-            profiles (
-              username,
-              profilePhotoUrl
-            ),
-
-            StrayReportImages (
-              imageID,
-              photoUrl
-            )
-          ''')
-          .order('created_at', ascending: false);
-
-      print('Fetched stray reports: $data');
-
-      final reports = data
-          .map<StrayReport>(
-            (row) => StrayReport.fromJson(row),
-          )
-          .toList();
-
-      print('Converted stray reports: $reports');
-
-      if (!mounted) return;
-
-      setState(() {
-        _strayReports = reports;
-        _isStrayLoading = false;
-      });
-    } catch (e, stackTrace) {
-      print('Error fetching stray reports: $e');
-      print(stackTrace);
-
-      if (!mounted) return;
-
-      setState(() {
-        _isStrayLoading = false;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to load stray reports: $e',
-          ),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Failed to load stray reports: $e',
         ),
-      );
-    }
+      ),
+    );
   }
-
+}
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -383,242 +439,298 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
           const SizedBox(height: 10),
         ],
         const SizedBox(height: 10),
-         Expanded(
-          child: _isStrayFeed
-              ? _buildStrayFeed()
-              : (
-                  _isLoading
-                      ? const Center(
-                          child: CircularProgressIndicator(),
-                        )
+        Expanded(
+          child:
+              _isStrayFeed
+                  ? _buildStrayFeed()
+                  : (_isLoading
+                      ? const Center(child: CircularProgressIndicator())
                       : RefreshIndicator(
-                          onRefresh: () =>
-                              _applyFilter(_selectedFilter),
-                          child: ListView.separated(
-                            padding: const EdgeInsets.fromLTRB(
-                              20,
-                              0,
-                              20,
-                              20,
-                            ),
-                            itemCount: _posts.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 18),
-                            itemBuilder: (context, i) =>
-                                _PostCard(post: _posts[i]),
-                          ),
-                        )
-                ),
+                        onRefresh: () => _applyFilter(_selectedFilter),
+                        child: ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                          itemCount: _posts.length,
+                          separatorBuilder:
+                              (_, __) => const SizedBox(height: 18),
+                          itemBuilder:
+                              (context, i) => _PostCard(post: _posts[i]),
+                        ),
+                      )),
         ),
       ],
     );
   }
 
-    Widget _buildStrayFeed() {
-      if (_isStrayLoading) {
-        return const Center(
-          child: CircularProgressIndicator(),
-        );
-      }
+  Widget _buildStrayFeed() {
+    if (_isStrayLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-      return RefreshIndicator(
-        onRefresh: _fetchStrayReports,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          children: [
-            // ------------------------------------------------------
-            // REPORT STRAY BUTTON
-            // ------------------------------------------------------
+    return RefreshIndicator(
+      onRefresh: _fetchStrayReports,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        children: [
+          // ------------------------------------------------------
+          // REPORT STRAY BUTTON
+          // ------------------------------------------------------
+          Container(
+            margin: const EdgeInsets.only(bottom: 18),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.chipGrey,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: AppColors.accent,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.pets_outlined,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
 
-            Container(
-              margin: const EdgeInsets.only(bottom: 18),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.chipGrey,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Row(
+                const SizedBox(width: 12),
+
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: const [
+                      Text(
+                        'Spotted a stray?',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        'Report it to the PawPers community.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                IconButton(
+                  onPressed: () async {
+                    final result = await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ReportStrayScreen(),
+                      ),
+                    );
+
+                    // Refresh the feed after
+                    // successfully submitting a report.
+                    if (result == true) {
+                      await _fetchStrayReports();
+                    }
+                  },
+                  icon: const Icon(
+                    Icons.add_circle_outline,
+                    color: AppColors.primary,
+                    size: 28,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ------------------------------------------------------
+          // NO REPORTS
+          // ------------------------------------------------------
+          if (_strayReports.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: 120),
+              child: Column(
                 children: [
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: AppColors.accent,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.pets_outlined,
-                      color: AppColors.textPrimary,
-                    ),
+                  Icon(Icons.pets_outlined, size: 60, color: AppColors.primary),
+
+                  SizedBox(height: 16),
+
+                  Text(
+                    'No stray reports yet',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
                   ),
 
-                  const SizedBox(width: 12),
+                  SizedBox(height: 8),
 
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          'Spotted a stray?',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        SizedBox(height: 3),
-                        Text(
-                          'Report it to the PawPers community.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  IconButton(
-                    onPressed: () async {
-                      final result =
-                          await Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              const ReportStrayScreen(),
-                        ),
-                      );
-
-                      // Refresh the feed after
-                      // successfully submitting a report.
-                      if (result == true) {
-                        await _fetchStrayReports();
-                      }
-                    },
-                    icon: const Icon(
-                      Icons.add_circle_outline,
-                      color: AppColors.primary,
-                      size: 28,
-                    ),
+                  Text(
+                    'Be the first to report a stray animal.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.textSecondary),
                   ),
                 ],
               ),
             ),
 
-            // ------------------------------------------------------
-            // NO REPORTS
-            // ------------------------------------------------------
-
-            if (_strayReports.isEmpty)
-              const Padding(
-                padding: EdgeInsets.only(top: 120),
-                child: Column(
-                  children: [
-                    Icon(
-                      Icons.pets_outlined,
-                      size: 60,
-                      color: AppColors.primary,
-                    ),
-
-                    SizedBox(height: 16),
-
-                    Text(
-                      'No stray reports yet',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-
-                    SizedBox(height: 8),
-
-                    Text(
-                      'Be the first to report a stray animal.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-            // ------------------------------------------------------
-            // STRAY REPORTS
-            // ------------------------------------------------------
-
-            ..._strayReports.map(
-              (report) => Padding(
-                padding: const EdgeInsets.only(bottom: 18),
-                child: _StrayReportCard(
-                  report: report,
-                ),
-              ),
+          // ------------------------------------------------------
+          // STRAY REPORTS
+          // ------------------------------------------------------
+          ..._strayReports.map(
+            (report) => Padding(
+              padding: const EdgeInsets.only(bottom: 18),
+              child: _StrayReportCard(report: report),
             ),
-          ],
-        ),
-      );
-    }
+          ),
+        ],
+      ),
+    );
+  }
 } // end HomeFeedTabState
 
 class _StrayReportCard extends StatefulWidget {
   final StrayReport report;
 
-  const _StrayReportCard({
-    required this.report,
-  });
+  const _StrayReportCard({required this.report});
 
   @override
-  State<_StrayReportCard> createState() =>
-      _StrayReportCardState();
+  State<_StrayReportCard> createState() => _StrayReportCardState();
 }
 
-class _StrayReportCardState
-    extends State<_StrayReportCard> {
+class _StrayReportCardState extends State<_StrayReportCard> {
 
+  late bool _isLiked;
+  late int _likeCount;
+  late int _commentCount;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _isLiked = widget.report.isLiked;
+    _likeCount = widget.report.likeCount;
+    _commentCount = widget.report.commentCount;
+  }
+
+  Future<void> _toggleLike() async {
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+
+    if (user == null) return;
+
+    try {
+      if (_isLiked) {
+        // Remove like
+        await supabase
+            .from('StrayReportReactions')
+            .delete()
+            .eq('strayID', widget.report.id)
+            .eq('userID', user.id);
+
+        if (!mounted) return;
+
+        setState(() {
+          _isLiked = false;
+          _likeCount--;
+        });
+      } else {
+        // Add like
+        await supabase.from('StrayReportReactions').insert({
+          'strayID': widget.report.id,
+          'userID': user.id,
+        });
+
+        if (!mounted) return;
+
+        setState(() {
+          _isLiked = true;
+          _likeCount++;
+        });
+      }
+    } catch (e) {
+      print('Error toggling stray reaction: $e');
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update like: $e'),
+        ),
+      );
+    }
+  }
   @override
   Widget build(BuildContext context) {
     final report = widget.report;
 
-    return Column(
+    return InkWell(
+      borderRadius: BorderRadius.circular(10),
+      onTap: () {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => StrayReportDetailScreen(
+              report: widget.report,
+            ),
+          ),
+        );
+      },
+    child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-
-        // USER
-        Row(
-          children: [
-            CircleAvatar(
-              radius: 14,
-              backgroundColor: AppColors.placeholder,
-              backgroundImage:
-                  report.profilePhotoUrl != null &&
-                          report.profilePhotoUrl!.isNotEmpty
-                      ? NetworkImage(
-                          report.profilePhotoUrl!,
-                        )
-                      : null,
-              child:
-                  report.profilePhotoUrl == null ||
-                          report.profilePhotoUrl!.isEmpty
-                      ? const Icon(
-                          Icons.person,
-                          size: 16,
-                          color: AppColors.textSecondary,
-                        )
-                      : null,
-            ),
-
-            const SizedBox(width: 8),
-
-            Text(
-              report.username ?? 'Unknown User',
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 13,
+      // USER + STATUS
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 14,
+                backgroundColor: AppColors.placeholder,
+                backgroundImage:
+                    report.profilePhotoUrl != null &&
+                            report.profilePhotoUrl!.isNotEmpty
+                        ? NetworkImage(report.profilePhotoUrl!)
+                        : null,
+                child:
+                    report.profilePhotoUrl == null ||
+                            report.profilePhotoUrl!.isEmpty
+                        ? const Icon(
+                            Icons.person,
+                            size: 16,
+                            color: AppColors.textSecondary,
+                          )
+                        : null,
               ),
-            ),
-          ],
-        ),
+
+              const SizedBox(width: 8),
+
+              Expanded(
+                child: Text(
+                  report.username ?? 'Unknown User',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 5,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.chipGrey,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  report.status.toUpperCase(),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
 
         const SizedBox(height: 10),
 
@@ -630,17 +742,13 @@ class _StrayReportCardState
               itemCount: report.imageUrls.length,
               itemBuilder: (context, index) {
                 return ClipRRect(
-                  borderRadius:
-                      BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(10),
                   child: Image.network(
                     report.imageUrls[index],
                     width: double.infinity,
                     fit: BoxFit.cover,
-                    errorBuilder:
-                        (context, error, stackTrace) {
-                      return const ImagePlaceholderBox(
-                        height: 250,
-                      );
+                    errorBuilder: (context, error, stackTrace) {
+                      return const ImagePlaceholderBox(height: 250);
                     },
                   ),
                 );
@@ -648,72 +756,181 @@ class _StrayReportCardState
             ),
           )
         else
-          const ImagePlaceholderBox(
-            height: 140,
-          ),
+          const ImagePlaceholderBox(height: 140),
 
         const SizedBox(height: 10),
 
         // LOCATION
-        if (report.location != null &&
-            report.location!.isNotEmpty)
-          Row(
-            children: [
-              const Icon(
-                Icons.location_on_outlined,
-                size: 18,
-                color: AppColors.primary,
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Text(
-                  report.location!,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
+        if (widget.report.location != null &&
+            widget.report.location!.trim().isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 10),
+            child: InkWell(
+              onTap: () => _openLocationInGoogleMaps(),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.location_on_outlined,
+                      size: 18,
+                      color: AppColors.primary,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        widget.report.location!,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.primary,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
+
+        // if (widget.report.latitude != null && widget.report.longitude != null)
+        //   Padding(
+        //     padding: const EdgeInsets.only(left: 24, top: 2),
+        //     child: Text(
+        //       '${widget.report.latitude!.toStringAsFixed(5)}, '
+        //       '${widget.report.longitude!.toStringAsFixed(5)}',
+        //       style: const TextStyle(
+        //         fontSize: 11,
+        //         color: AppColors.textSecondary,
+        //       ),
+        //     ),
+        //   ),
 
         // DESCRIPTION
         if (report.description != null &&
             report.description!.trim().isNotEmpty) ...[
           const SizedBox(height: 8),
-          Text(
-            report.description!,
-            style: const TextStyle(
-              fontSize: 13,
-            ),
-          ),
+          Text(report.description!, style: const TextStyle(fontSize: 13)),
         ],
 
-        const SizedBox(height: 8),
+       const SizedBox(height: 8),
 
-        // STATUS
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 10,
-            vertical: 5,
-          ),
-          decoration: BoxDecoration(
-            color: AppColors.chipGrey,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            report.status.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-            ),
+        // LIKES / COMMENTS
+        Transform.translate(
+          offset: const Offset(-10, 0),
+          child: Row(
+            children: [
+              // LIKE BUTTON
+              IconButton(
+                onPressed: _toggleLike,
+                icon: Icon(
+                  _isLiked
+                      ? Icons.favorite
+                      : Icons.favorite_border,
+                  color: _isLiked
+                      ? Colors.red
+                      : AppColors.textSecondary,
+                ),
+              ),
+
+              // LIKE COUNT
+              GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => StrayReportDetailScreen(
+                        report: widget.report,
+                      ),
+                    ),
+                  );
+                },
+                child: Text(
+                  '$_likeCount Likes',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 16),
+
+              // COMMENT BUTTON
+              IconButton(
+                onPressed: () async {
+                  await Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => StrayReportCommentsScreen(
+                        strayId: widget.report.id,
+                      ),
+                    ),
+                  );
+                },
+                icon: const Icon(
+                  Icons.comment_outlined,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+
+              // COMMENT COUNT
+              GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => StrayReportDetailScreen(
+                        report: widget.report,
+                      ),
+                    ),
+                  );
+                },
+                child: Text(
+                  '$_commentCount Comments',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
+    
       ],
+    ),
     );
   }
-} //end StrayReportCard
 
+ Future<void> _openLocationInGoogleMaps() async {
+  final latitude = widget.report.latitude;
+  final longitude = widget.report.longitude;
+
+  if (latitude == null || longitude == null) {
+    return;
+  }
+
+  final uri = Uri.parse(
+    'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude',
+  );
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(
+        uri,
+        mode: LaunchMode.externalApplication,
+      );
+    } else {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open Google Maps.'),
+        ),
+      );
+    }
+  }
+} //end StrayReportCard
 
 class _FeedTabButton extends StatelessWidget {
   final String label;
@@ -825,43 +1042,74 @@ class _PostCardState extends State<_PostCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // USERNAME
-        if (widget.post.authorName.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: Row(
-              children: [
-                //profile pic
-                CircleAvatar(
-                  radius: 14,
-                  backgroundColor: AppColors.placeholder,
-                  backgroundImage:
-                      widget.post.authorAvatarUrl != null &&
-                              widget.post.authorAvatarUrl!.isNotEmpty
-                          ? NetworkImage(widget.post.authorAvatarUrl!)
-                          : null,
-                  child:
-                      widget.post.authorAvatarUrl == null ||
-                              widget.post.authorAvatarUrl!.isEmpty
-                          ? const Icon(
-                            Icons.person,
-                            size: 16,
-                            color: AppColors.textSecondary,
-                          )
-                          : null,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  widget.post.authorName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
+      
+       // USER + KEYWORDS
+          if (widget.post.authorName.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // PROFILE PHOTO
+                  CircleAvatar(
+                    radius: 14,
+                    backgroundColor: AppColors.placeholder,
+                    backgroundImage:
+                        widget.post.authorAvatarUrl != null &&
+                                widget.post.authorAvatarUrl!.isNotEmpty
+                            ? NetworkImage(widget.post.authorAvatarUrl!)
+                            : null,
+                    child:
+                        widget.post.authorAvatarUrl == null ||
+                                widget.post.authorAvatarUrl!.isEmpty
+                            ? const Icon(
+                                Icons.person,
+                                size: 16,
+                                color: AppColors.textSecondary,
+                              )
+                            : null,
                   ),
-                ),
-              ],
-            ),
-          ),
 
+                  const SizedBox(width: 8),
+
+                  // USERNAME
+                  Text(
+                    widget.post.authorName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
+
+                  const Spacer(),
+
+                  // KEYWORDS
+                 
+                  if (widget.post.categories.isNotEmpty)
+                    Flexible(
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.chipGrey,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          widget.post.categories.join(' / '),
+                          textAlign: TextAlign.right,
+                          style: const TextStyle(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
         // IMAGES
         if (widget.post.imageUrl.isNotEmpty)
           SizedBox(

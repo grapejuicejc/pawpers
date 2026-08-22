@@ -109,6 +109,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
         commentCount: 0,
 
+        categories: List<String>.from(data['category'] ?? []),
+
         createdAt: DateTime.parse(
           data['created_at'].toString(),
         ),
