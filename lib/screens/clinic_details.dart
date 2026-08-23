@@ -30,30 +30,56 @@ class ClinicDetailsPage extends StatelessWidget {
   Future<void> _callClinic() async {
     final phone = details["formatted_phone_number"];
 
-    if (phone == null) {
-      return;
-    }
-
-    final phoneUrl = Uri.parse("tel:$phone");
-
-    if (await canLaunchUrl(phoneUrl)) {
-      await launchUrl(phoneUrl);
-    }
+   if (phone == null || phone.toString().isEmpty) {
+    return;
   }
+
+  final phoneUrl = Uri(
+    scheme: 'tel',
+    path: phone.toString(),
+  );
+
+      try {
+    final launched = await launchUrl(phoneUrl);
+
+    if (!launched) {
+      debugPrint("Could not launch phone: $phoneUrl");
+    }
+  } catch (e) {
+    debugPrint("Error launching phone: $e");
+  }
+  }
+//============================================================
 
   Future<void> _openWebsite() async {
-    final website = details["website"];
+  final website = details["website"];
 
-    if (website == null) {
-      return;
-    }
-
-    final url = Uri.parse(website);
-
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url, mode: LaunchMode.externalApplication);
-    }
+  if (website == null || website.toString().trim().isEmpty) {
+    return;
   }
+
+  String websiteString = website.toString().trim();
+
+  if (!websiteString.startsWith('http://') &&
+      !websiteString.startsWith('https://')) {
+    websiteString = 'https://$websiteString';
+  }
+
+  final websiteUrl = Uri.parse(websiteString);
+
+  try {
+    final launched = await launchUrl(
+      websiteUrl,
+      mode: LaunchMode.externalApplication,
+    );
+
+    if (!launched) {
+      debugPrint("Could not launch website: $websiteUrl");
+    }
+  } catch (e) {
+    debugPrint("Error launching website: $e");
+  }
+}
 
   @override
   Widget build(BuildContext context) {

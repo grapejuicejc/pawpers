@@ -1,24 +1,26 @@
 import 'package:PawPers/auth/auth_gate.dart';
 import 'package:flutter/material.dart';
-import 'screens/onboarding_screen.dart';
+//import 'screens/onboarding_screen.dart';
 import 'app_theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screens/home_screen.dart';
 import 'screens/admin/admin_home.dart';
-import 'screens/login.dart';
+//import 'screens/login.dart';
 import 'services/emotion_service.dart';
+
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await EmotionService.initialize();
 
-  // DB (Supabase): initialize 
+  // DB (Supabase): initialize
   // project's URL + anon key.
   await Supabase.initialize(
     url: 'https://uptrhfbrwanlvhgrcqxm.supabase.co',
     //url: 'https://uptrhfbrwanlvhgrcqxm.supabase.co/rest/v1/',
     publishableKey: 'sb_publishable_F_HCwCOsz0FqL13X0LCbGw_ptPjVcdj',
   );
+
 
   runApp(const PawPersApp());
 }

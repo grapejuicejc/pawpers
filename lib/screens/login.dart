@@ -5,6 +5,7 @@ import '../../widgets/primary_btn.dart';
 import 'registration.dart';
 import '../../auth/auth_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'forgot_password.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -41,28 +42,22 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await authService.signInWithEmailPassword(email, password);
 
-      if (!mounted) return;
+      // if (!mounted) return;
 
-      Navigator.of(context).pushReplacementNamed('/home');
+      // Navigator.of(context).pushReplacementNamed('/home');
     } on AuthException catch (e) {
-      if (!mounted) return;
+        if (!mounted) return;
 
-      setState(() {
-        _errorText = "Account Not Found. Please sign up.";
-      });
-    } catch (e) {
-      if (!mounted) return;
-
-      setState(() {
-        _errorText = e.toString().replaceFirst("Exception: ", "");
-      });
-    } finally {
-      if (!mounted) return;
-
-      setState(() {
-        _isLoading = false;
-      });
-    }
+        setState(() {
+          if (e.message.toLowerCase().contains('invalid login credentials')) {
+            _errorText = 'Incorrect email or password.';
+          } else if (e.message.toLowerCase().contains('email not confirmed')) {
+            _errorText = 'Please confirm your email before logging in.';
+          } else {
+            _errorText = e.message;
+          }
+        });
+      }
   }
 
   @override
@@ -118,7 +113,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {
-                    // TODO: forgot-password flow (Supabase: client.auth.resetPasswordForEmail)
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const ForgotPasswordScreen(),
+                      ),
+                    );
+                
                   },
                   child: const Text(
                     'Forgot Password?',

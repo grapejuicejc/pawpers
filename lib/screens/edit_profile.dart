@@ -102,7 +102,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         .from('profilepictures')
         .getPublicUrl(filePath);
 
-    return url;
+    //return url;
+    
+     // Cache-bust so Image.network doesn't show a stale cached copy
+    return '$url?t=${DateTime.now().millisecondsSinceEpoch}';
   }
 
   Future<void> _handleSaveChanges() async {

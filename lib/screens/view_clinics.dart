@@ -14,7 +14,9 @@ class ViewClinic extends StatefulWidget {
   State<ViewClinic> createState() => _ViewClinicState();
 }
 
-class _ViewClinicState extends State<ViewClinic> {
+class _ViewClinicState extends State<ViewClinic> with WidgetsBindingObserver {
+  //WidgetBindingObserver to refresh page after turn on location service
+
   GoogleMapController? mapController;
 
   final LocationService locationService = LocationService();
@@ -23,6 +25,8 @@ class _ViewClinicState extends State<ViewClinic> {
 
   bool loading = true;
 
+  bool _locationUnavailable = false;
+
   Set<Marker> markers = {};
 
   List<VetClinic> clinics = []; // List to hold nearby clinics
@@ -30,16 +34,50 @@ class _ViewClinicState extends State<ViewClinic> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     getLocation();
   }
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+
+    mapController?.dispose();
+
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(
+    AppLifecycleState state,
+  ) {
+    if (state == AppLifecycleState.resumed &&
+        _locationUnavailable) {
+      getLocation();
+    }
+  }
   //GET LOCATIONNNN
   Future<void> getLocation() async {
     try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+      if (!serviceEnabled) {
+        _locationUnavailable = true;
+
+        if (mounted) {
+          setState(() {
+            loading = false;
+          });
+        }
+
+        return;
+      }
       Position position = await locationService.determinePosition();
 
       debugPrint("Latitude: ${position.latitude}");
       debugPrint("Longitude: ${position.longitude}");
+
+      _locationUnavailable = false;
 
       currentLocation = LatLng(position.latitude, position.longitude);
 
@@ -47,6 +85,8 @@ class _ViewClinicState extends State<ViewClinic> {
         position.latitude,
         position.longitude,
       );
+
+      markers.clear();
 
       for (var clinic in clinics) {
         markers.add(
@@ -72,18 +112,35 @@ class _ViewClinicState extends State<ViewClinic> {
         ),
       );
 
-      setState(() {
-        loading = false;
-      });
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
 
       mapController?.animateCamera(
         CameraUpdate.newLatLngZoom(currentLocation, 15),
       );
     } catch (e) {
-      setState(() {
-        loading = false;
-      });
+      debugPrint("Location error: $e");
+
+      if (mounted) {
+        setState(() {
+          loading = false;
+        });
+      }
     }
+  } //end of get location
+
+
+  Future<void> _refreshLocation() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+
+    if (!serviceEnabled) {
+      return;
+    }
+
+    getLocation();
   }
 
   //   Future<void> _showLocationDialog() async {
@@ -223,7 +280,11 @@ class _ViewClinicState extends State<ViewClinic> {
           prefixIcon: Icon(Icons.search),
         ),
         onSubmitted: (value) async {
-          final results = await ClinicService().searchClinics(value);
+          final results = await ClinicService().searchClinics(
+            value,
+            latitude: currentLocation.latitude,
+            longitude: currentLocation.longitude,
+            );
 
           setState(() {
             clinics = results;
