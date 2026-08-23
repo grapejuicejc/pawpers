@@ -1,3 +1,4 @@
+import 'package:PawPers/screens/vet_verification.dart';
 import 'package:flutter/material.dart';
 import '../../app_theme.dart';
 import '../../widgets/image_placeholder.dart';
@@ -31,10 +32,10 @@ class _ProfileScreenState extends State<ProfileScreen>
   String? _username;
   String? _bio;
   String? _profilePhotoUrl;
+  bool _isVerified = false;
 
   Future<void> _loadProfile() async {
-    final profile =
-        await SupabaseService.instance.getCurrentUserProfile();
+    final profile = await SupabaseService.instance.getCurrentUserProfile();
 
     if (!mounted) return;
 
@@ -42,6 +43,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       _username = profile?['username'];
       _bio = profile?['bio'];
       _profilePhotoUrl = profile?['profilePhotoUrl'];
+       _isVerified = profile?['is_verified'] ?? false; 
     });
   }
 
@@ -49,10 +51,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   void initState() {
     super.initState();
 
-    _tabController = TabController(
-      length: 3,
-      vsync: this,
-    );
+    _tabController = TabController(length: 3, vsync: this);
 
     _loadProfile();
   }
@@ -63,9 +62,7 @@ class _ProfileScreenState extends State<ProfileScreen>
     if (!mounted) return;
 
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (_) => const LoginScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
     );
   }
@@ -81,43 +78,53 @@ class _ProfileScreenState extends State<ProfileScreen>
             // ---------------------------------------------------------
             // PROFILE PHOTO
             // ---------------------------------------------------------
-
-            _profilePhotoUrl != null &&
-                    _profilePhotoUrl!.isNotEmpty
+            _profilePhotoUrl != null && _profilePhotoUrl!.isNotEmpty
                 ? ClipOval(
-                    child: Image.network(
-                      _profilePhotoUrl!,
-                      height: 84,
-                      width: 84,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) {
-                        return const ImagePlaceholderBox(
-                          height: 84,
-                          width: 84,
-                          borderRadius: 42,
-                        );
-                      },
-                    ),
-                  )
-                : const ImagePlaceholderBox(
+                  child: Image.network(
+                    _profilePhotoUrl!,
                     height: 84,
                     width: 84,
-                    borderRadius: 42,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) {
+                      return const ImagePlaceholderBox(
+                        height: 84,
+                        width: 84,
+                        borderRadius: 42,
+                      );
+                    },
                   ),
+                )
+                : const ImagePlaceholderBox(
+                  height: 84,
+                  width: 84,
+                  borderRadius: 42,
+                ),
 
             const SizedBox(height: 10),
 
             // ---------------------------------------------------------
             // USERNAME
             // ---------------------------------------------------------
-
-            Text(
-              _username ?? 'User',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
+           Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _username ?? 'User',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
-            ),
+              if (_isVerified) ...[
+                const SizedBox(width: 4),
+                const Icon(
+                  Icons.verified,
+                  color: Color.fromARGB(255, 8, 51, 126),
+                  size: 18,
+                ),
+              ],
+            ],
+          ),
 
             Text(
               _bio ?? 'Add a bio',
@@ -132,17 +139,14 @@ class _ProfileScreenState extends State<ProfileScreen>
             // ---------------------------------------------------------
             // EDIT PROFILE / PETS
             // ---------------------------------------------------------
-
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 TextButton(
                   onPressed: () async {
-                    final updated =
-                        await Navigator.of(context).push<bool>(
+                    final updated = await Navigator.of(context).push<bool>(
                       MaterialPageRoute(
-                        builder: (_) =>
-                            const EditProfileScreen(),
+                        builder: (_) => const EditProfileScreen(),
                       ),
                     );
 
@@ -161,18 +165,13 @@ class _ProfileScreenState extends State<ProfileScreen>
 
                 const Text(
                   '|',
-                  style: TextStyle(
-                    color: AppColors.textSecondary,
-                  ),
+                  style: TextStyle(color: AppColors.textSecondary),
                 ),
 
                 TextButton(
                   onPressed: () {
                     Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            const MyPetsScreen(),
-                      ),
+                      MaterialPageRoute(builder: (_) => const MyPetsScreen()),
                     );
                   },
                   child: const Text(
@@ -189,12 +188,10 @@ class _ProfileScreenState extends State<ProfileScreen>
             // ---------------------------------------------------------
             // TABS
             // ---------------------------------------------------------
-
             TabBar(
               controller: _tabController,
               labelColor: AppColors.primary,
-              unselectedLabelColor:
-                  AppColors.textSecondary,
+              unselectedLabelColor: AppColors.textSecondary,
               indicatorColor: AppColors.primary,
               tabs: const [
                 Tab(text: 'Post'),
@@ -206,11 +203,7 @@ class _ProfileScreenState extends State<ProfileScreen>
             Expanded(
               child: TabBarView(
                 controller: _tabController,
-                children: const [
-                  _PostsTab(),
-                  _CommentsTab(),
-                  _LikesTab(),
-                ],
+                children: const [_PostsTab(), _CommentsTab(), _LikesTab()],
               ),
             ),
 
@@ -219,7 +212,6 @@ class _ProfileScreenState extends State<ProfileScreen>
             // ---------------------------------------------------------
             // VETERINARIAN
             // ---------------------------------------------------------
-
             ListTile(
               leading: const Icon(
                 Icons.verified_outlined,
@@ -232,12 +224,16 @@ class _ProfileScreenState extends State<ProfileScreen>
               ),
               subtitle: const Text(
                 'Click here to Get Verified',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
               ),
-              onTap: () {},
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => VetVerificationScreen(),
+                  ),
+                );
+              },
             ),
           ],
         ),
@@ -245,16 +241,12 @@ class _ProfileScreenState extends State<ProfileScreen>
         // -----------------------------------------------------------
         // LOGOUT
         // -----------------------------------------------------------
-
         Positioned(
           top: 8,
           right: 8,
           child: IconButton(
             onPressed: _handleLogout,
-            icon: const Icon(
-              Icons.logout,
-              color: AppColors.danger,
-            ),
+            icon: const Icon(Icons.logout, color: AppColors.danger),
           ),
         ),
       ],
@@ -326,51 +318,47 @@ class _PostsTabState extends State<_PostsTab> {
           .eq('userID', user.id)
           .order('created_at', ascending: false);
 
-      final posts = data.map<Post>((row) {
-        final profile = row['profiles'];
+      final posts =
+          data.map<Post>((row) {
+            final profile = row['profiles'];
 
-        final images = row['PostImages'] as List? ?? [];
-        final reactions =
-            row['PostReactions'] as List? ?? [];
-        final comments =
-            row['PostComments'] as List? ?? [];
+            final images = row['PostImages'] as List? ?? [];
+            final reactions = row['PostReactions'] as List? ?? [];
+            final comments = row['PostComments'] as List? ?? [];
 
-        final imageUrls = images
-            .where(
-              (image) => image['photoUrl'] != null,
-            )
-            .map<String>(
-              (image) => image['photoUrl'].toString(),
-            )
-            .toList();
+            final imageUrls =
+                images
+                    .where((image) => image['photoUrl'] != null)
+                    .map<String>((image) => image['photoUrl'].toString())
+                    .toList();
 
-        return Post(
-          id: row['postID'].toString(),
-          authorId: row['userID'].toString(),
+            return Post(
+              id: row['postID'].toString(),
+              authorId: row['userID'].toString(),
 
-          authorName: profile != null
-              ? profile['username']?.toString() ?? 'User'
-              : 'User',
+              authorName:
+                  profile != null
+                      ? profile['username']?.toString() ?? 'User'
+                      : 'User',
 
-          authorAvatarUrl: profile != null
-              ? profile['profilePhotoUrl']?.toString()
-              : null,
+              authorAvatarUrl:
+                  profile != null
+                      ? profile['profilePhotoUrl']?.toString()
+                      : null,
 
-          caption: row['caption']?.toString(),
+              caption: row['caption']?.toString(),
 
-          imageUrl: imageUrls,
+              imageUrl: imageUrls,
 
-          likeCount: reactions.length,
+              likeCount: reactions.length,
 
-          commentCount: comments.length,
+              commentCount: comments.length,
 
-          categories: List<String>.from(row['category'] ?? []),
+              categories: List<String>.from(row['category'] ?? []),
 
-          createdAt: DateTime.parse(
-            row['created_at'].toString(),
-          ),
-        );
-      }).toList();
+              createdAt: DateTime.parse(row['created_at'].toString()),
+            );
+          }).toList();
 
       if (!mounted) return;
 
@@ -392,18 +380,14 @@ class _PostsTabState extends State<_PostsTab> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_posts.isEmpty) {
       return const Center(
         child: Text(
           'You have not posted anything yet.',
-          style: TextStyle(
-            color: AppColors.textSecondary,
-          ),
+          style: TextStyle(color: AppColors.textSecondary),
         ),
       );
     }
@@ -413,12 +397,9 @@ class _PostsTabState extends State<_PostsTab> {
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
         itemCount: _posts.length,
-        separatorBuilder: (_, __) =>
-            const SizedBox(height: 12),
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          return _MyPostCard(
-            post: _posts[index],
-          );
+          return _MyPostCard(post: _posts[index]);
         },
       ),
     );
@@ -432,20 +413,14 @@ class _PostsTabState extends State<_PostsTab> {
 class _MyPostCard extends StatelessWidget {
   final Post post;
 
-  const _MyPostCard({
-    required this.post,
-  });
+  const _MyPostCard({required this.post});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
-          MaterialPageRoute(
-            builder: (_) => PostDetailScreen(
-              postId: post.id,
-            ),
-          ),
+          MaterialPageRoute(builder: (_) => PostDetailScreen(postId: post.id)),
         );
       },
 
@@ -453,15 +428,12 @@ class _MyPostCard extends StatelessWidget {
         padding: const EdgeInsets.all(12),
 
         decoration: BoxDecoration(
-          border: Border.all(
-            color: AppColors.divider,
-          ),
+          border: Border.all(color: AppColors.divider),
           borderRadius: BorderRadius.circular(10),
         ),
 
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
 
           children: [
             Text(
@@ -480,12 +452,10 @@ class _MyPostCard extends StatelessWidget {
                 child: ListView.separated(
                   scrollDirection: Axis.horizontal,
                   itemCount: post.imageUrl.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(width: 8),
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
                   itemBuilder: (context, index) {
                     return ClipRRect(
-                      borderRadius:
-                          BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(8),
                       child: Image.network(
                         post.imageUrl[index],
                         width: 160,
@@ -502,17 +472,10 @@ class _MyPostCard extends StatelessWidget {
                 ),
               ),
 
-            if (post.imageUrl.isNotEmpty)
-              const SizedBox(height: 8),
+            if (post.imageUrl.isNotEmpty) const SizedBox(height: 8),
 
-            if (post.caption != null &&
-                post.caption!.trim().isNotEmpty)
-              Text(
-                post.caption!,
-                style: const TextStyle(
-                  fontSize: 13,
-                ),
-              ),
+            if (post.caption != null && post.caption!.trim().isNotEmpty)
+              Text(post.caption!, style: const TextStyle(fontSize: 13)),
 
             const SizedBox(height: 8),
 
@@ -638,8 +601,7 @@ class _CommentsTab extends StatefulWidget {
   const _CommentsTab();
 
   @override
-  State<_CommentsTab> createState() =>
-      _CommentsTabState();
+  State<_CommentsTab> createState() => _CommentsTabState();
 }
 
 class _CommentsTabState extends State<_CommentsTab> {
@@ -752,13 +714,11 @@ class _CommentsTabState extends State<_CommentsTab> {
             id: row['commentID'].toString(),
             postId: row['postID'].toString(),
             body: row['comment']?.toString() ?? '',
-            previewText: post != null
-                ? post['caption']?.toString() ??
-                    'Community Post'
-                : 'Community Post',
-            createdAt: DateTime.parse(
-              row['created_at'].toString(),
-            ),
+            previewText:
+                post != null
+                    ? post['caption']?.toString() ?? 'Community Post'
+                    : 'Community Post',
+            createdAt: DateTime.parse(row['created_at'].toString()),
             isStray: false,
           ),
         );
@@ -774,17 +734,9 @@ class _CommentsTabState extends State<_CommentsTab> {
         String previewText = 'Stray Report';
 
         if (stray != null) {
-          final description =
-              stray['description']
-                      ?.toString()
-                      .trim() ??
-                  '';
+          final description = stray['description']?.toString().trim() ?? '';
 
-          final location =
-              stray['location']
-                      ?.toString()
-                      .trim() ??
-                  '';
+          final location = stray['location']?.toString().trim() ?? '';
 
           if (description.isNotEmpty) {
             previewText = description;
@@ -799,9 +751,7 @@ class _CommentsTabState extends State<_CommentsTab> {
             strayId: row['strayID'].toString(),
             body: row['comment']?.toString() ?? '',
             previewText: previewText,
-            createdAt: DateTime.parse(
-              row['created_at'].toString(),
-            ),
+            createdAt: DateTime.parse(row['created_at'].toString()),
             isStray: true,
           ),
         );
@@ -811,10 +761,7 @@ class _CommentsTabState extends State<_CommentsTab> {
       // SORT
       // ============================================================
 
-      comments.sort(
-        (a, b) =>
-            b.createdAt.compareTo(a.createdAt),
-      );
+      comments.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       if (!mounted) return;
 
@@ -832,13 +779,9 @@ class _CommentsTabState extends State<_CommentsTab> {
         _isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to load comments: $e',
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load comments: $e')));
     }
   }
 
@@ -849,18 +792,14 @@ class _CommentsTabState extends State<_CommentsTab> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_comments.isEmpty) {
       return const Center(
         child: Text(
           'You have not commented anything yet.',
-          style: TextStyle(
-            color: AppColors.textSecondary,
-          ),
+          style: TextStyle(color: AppColors.textSecondary),
         ),
       );
     }
@@ -872,8 +811,7 @@ class _CommentsTabState extends State<_CommentsTab> {
         padding: const EdgeInsets.all(16),
         itemCount: _comments.length,
 
-        separatorBuilder: (_, __) =>
-            const SizedBox(height: 12),
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
 
         itemBuilder: (context, index) {
           final comment = _comments[index];
@@ -886,25 +824,20 @@ class _CommentsTabState extends State<_CommentsTab> {
               // STRAY REPORT COMMENT
               // ======================================================
 
-              if (comment.isStray &&
-                  comment.strayId != null) {
-                final strayData = await _fetchStrayReport(
-                  comment.strayId!,
-                );
+              if (comment.isStray && comment.strayId != null) {
+                final strayData = await _fetchStrayReport(comment.strayId!);
 
-                if (!context.mounted ||
-                    strayData == null) {
+                if (!context.mounted || strayData == null) {
                   return;
                 }
 
                 await Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) =>
-                        StrayReportDetailScreen(
-                      report: strayData,
-                      highlightCommentId:
-                          comment.id,
-                    ),
+                    builder:
+                        (_) => StrayReportDetailScreen(
+                          report: strayData,
+                          highlightCommentId: comment.id,
+                        ),
                   ),
                 );
 
@@ -920,11 +853,11 @@ class _CommentsTabState extends State<_CommentsTab> {
               if (comment.postId != null) {
                 await Navigator.of(context).push(
                   MaterialPageRoute(
-                    builder: (_) => PostDetailScreen(
-                      postId: comment.postId!,
-                      highlightCommentId:
-                          comment.id,
-                    ),
+                    builder:
+                        (_) => PostDetailScreen(
+                          postId: comment.postId!,
+                          highlightCommentId: comment.id,
+                        ),
                   ),
                 );
 
@@ -936,22 +869,17 @@ class _CommentsTabState extends State<_CommentsTab> {
               padding: const EdgeInsets.all(12),
 
               decoration: BoxDecoration(
-                border: Border.all(
-                  color: AppColors.divider,
-                ),
-                borderRadius:
-                    BorderRadius.circular(10),
+                border: Border.all(color: AppColors.divider),
+                borderRadius: BorderRadius.circular(10),
               ),
 
               child: Row(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
 
                 children: [
                   Expanded(
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
 
                       children: [
                         Row(
@@ -961,8 +889,7 @@ class _CommentsTabState extends State<_CommentsTab> {
                                   ? Icons.pets_outlined
                                   : Icons.article_outlined,
                               size: 15,
-                              color:
-                                  AppColors.primary,
+                              color: AppColors.primary,
                             ),
 
                             const SizedBox(width: 5),
@@ -973,10 +900,8 @@ class _CommentsTabState extends State<_CommentsTab> {
                                   : 'Community Post',
                               style: const TextStyle(
                                 fontSize: 11,
-                                fontWeight:
-                                    FontWeight.w700,
-                                color:
-                                    AppColors.primary,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.primary,
                               ),
                             ),
                           ],
@@ -988,12 +913,10 @@ class _CommentsTabState extends State<_CommentsTab> {
                           'Replying to: '
                           '"${comment.previewText}"',
                           maxLines: 2,
-                          overflow:
-                              TextOverflow.ellipsis,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 11,
-                            color:
-                                AppColors.textSecondary,
+                            color: AppColors.textSecondary,
                           ),
                         ),
 
@@ -1003,21 +926,17 @@ class _CommentsTabState extends State<_CommentsTab> {
                           comment.body,
                           style: const TextStyle(
                             fontSize: 13,
-                            fontWeight:
-                                FontWeight.w700,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
 
                         const SizedBox(height: 6),
 
                         Text(
-                          formatProfileDate(
-                            comment.createdAt,
-                          ),
+                          formatProfileDate(comment.createdAt),
                           style: const TextStyle(
                             fontSize: 11,
-                            color:
-                                AppColors.textSecondary,
+                            color: AppColors.textSecondary,
                           ),
                         ),
                       ],
@@ -1047,15 +966,14 @@ class _CommentsTabState extends State<_CommentsTab> {
 // FETCH STRAY REPORT
 // ===========================================================================
 
-Future<StrayReport?> _fetchStrayReport(
-  String strayId,
-) async {
+Future<StrayReport?> _fetchStrayReport(String strayId) async {
   try {
     final supabase = Supabase.instance.client;
 
-    final data = await supabase
-        .from('StrayReports')
-        .select('''
+    final data =
+        await supabase
+            .from('StrayReports')
+            .select('''
           strayID,
           userID,
           description,
@@ -1084,8 +1002,8 @@ Future<StrayReport?> _fetchStrayReport(
             commentID
           )
         ''')
-        .eq('strayID', strayId)
-        .maybeSingle();
+            .eq('strayID', strayId)
+            .maybeSingle();
 
     if (data == null) {
       return null;
@@ -1093,57 +1011,45 @@ Future<StrayReport?> _fetchStrayReport(
 
     final profile = data['profiles'];
 
-    final images =
-        data['StrayReportImages'] as List? ?? [];
+    final images = data['StrayReportImages'] as List? ?? [];
 
-    final reactions =
-        data['StrayReportReactions'] as List? ?? [];
+    final reactions = data['StrayReportReactions'] as List? ?? [];
 
-    final comments =
-        data['StrayReportComments'] as List? ?? [];
+    final comments = data['StrayReportComments'] as List? ?? [];
 
-    final imageUrls = images
-        .where(
-          (image) => image['photoUrl'] != null,
-        )
-        .map<String>(
-          (image) => image['photoUrl'].toString(),
-        )
-        .toList();
+    final imageUrls =
+        images
+            .where((image) => image['photoUrl'] != null)
+            .map<String>((image) => image['photoUrl'].toString())
+            .toList();
 
     return StrayReport(
       id: data['strayID'].toString(),
 
       userId: data['userID'].toString(),
 
-      description:
-          data['description']?.toString(),
+      description: data['description']?.toString(),
 
-      latitude: data['latitude'] != null
-          ? (data['latitude'] as num).toDouble()
-          : null,
+      latitude:
+          data['latitude'] != null
+              ? (data['latitude'] as num).toDouble()
+              : null,
 
-      longitude: data['longitude'] != null
-          ? (data['longitude'] as num).toDouble()
-          : null,
+      longitude:
+          data['longitude'] != null
+              ? (data['longitude'] as num).toDouble()
+              : null,
 
-      location:
-          data['location']?.toString(),
+      location: data['location']?.toString(),
 
-      status:
-          data['status']?.toString() ?? 'active',
+      status: data['status']?.toString() ?? 'active',
 
-      createdAt: DateTime.parse(
-        data['created_at'].toString(),
-      ),
+      createdAt: DateTime.parse(data['created_at'].toString()),
 
-      username: profile != null
-          ? profile['username']?.toString()
-          : null,
+      username: profile != null ? profile['username']?.toString() : null,
 
-      profilePhotoUrl: profile != null
-          ? profile['profilePhotoUrl']?.toString()
-          : null,
+      profilePhotoUrl:
+          profile != null ? profile['profilePhotoUrl']?.toString() : null,
 
       imageUrls: imageUrls,
 
@@ -1154,9 +1060,7 @@ Future<StrayReport?> _fetchStrayReport(
       isLiked: true,
     );
   } catch (e) {
-    print(
-      'ERROR FETCHING STRAY REPORT: $e',
-    );
+    print('ERROR FETCHING STRAY REPORT: $e');
 
     return null;
   }
@@ -1170,8 +1074,7 @@ class _LikesTab extends StatefulWidget {
   const _LikesTab();
 
   @override
-  State<_LikesTab> createState() =>
-      _LikesTabState();
+  State<_LikesTab> createState() => _LikesTabState();
 }
 
 class _LikesTabState extends State<_LikesTab> {
@@ -1297,43 +1200,31 @@ class _LikesTabState extends State<_LikesTab> {
 
         if (post == null) continue;
 
-        final images =
-            post['PostImages'] as List? ?? [];
+        final images = post['PostImages'] as List? ?? [];
 
-        final reactions =
-            post['PostReactions'] as List? ?? [];
+        final reactions = post['PostReactions'] as List? ?? [];
 
-        final comments =
-            post['PostComments'] as List? ?? [];
+        final comments = post['PostComments'] as List? ?? [];
 
-        final imageUrls = images
-            .where(
-              (image) => image['photoUrl'] != null,
-            )
-            .map<String>(
-              (image) => image['photoUrl'].toString(),
-            )
-            .toList();
+        final imageUrls =
+            images
+                .where((image) => image['photoUrl'] != null)
+                .map<String>((image) => image['photoUrl'].toString())
+                .toList();
 
         likes.add(
           ProfileLike(
-            postId:
-                post['postID'].toString(),
+            postId: post['postID'].toString(),
 
-            caption:
-                post['caption']?.toString(),
+            caption: post['caption']?.toString(),
 
             imageUrls: imageUrls,
 
-            createdAt: DateTime.parse(
-              post['created_at'].toString(),
-            ),
+            createdAt: DateTime.parse(post['created_at'].toString()),
 
-            likeCount:
-                reactions.length,
+            likeCount: reactions.length,
 
-            commentCount:
-                comments.length,
+            commentCount: comments.length,
 
             isStray: false,
           ),
@@ -1349,82 +1240,52 @@ class _LikesTabState extends State<_LikesTab> {
 
         if (stray == null) continue;
 
-        final images =
-            stray['StrayReportImages']
-                    as List? ??
-                [];
+        final images = stray['StrayReportImages'] as List? ?? [];
 
-        final reactions =
-            stray['StrayReportReactions']
-                    as List? ??
-                [];
+        final reactions = stray['StrayReportReactions'] as List? ?? [];
 
-        final comments =
-            stray['StrayReportComments']
-                    as List? ??
-                [];
+        final comments = stray['StrayReportComments'] as List? ?? [];
 
-        final profile =
-            stray['profiles'];
+        final profile = stray['profiles'];
 
-        final imageUrls = images
-            .where(
-              (image) => image['photoUrl'] != null,
-            )
-            .map<String>(
-              (image) => image['photoUrl'].toString(),
-            )
-            .toList();
+        final imageUrls =
+            images
+                .where((image) => image['photoUrl'] != null)
+                .map<String>((image) => image['photoUrl'].toString())
+                .toList();
 
         likes.add(
           ProfileLike(
-            strayId:
-                stray['strayID'].toString(),
+            strayId: stray['strayID'].toString(),
 
-            description:
-                stray['description']?.toString(),
+            description: stray['description']?.toString(),
 
-            location:
-                stray['location']?.toString(),
+            location: stray['location']?.toString(),
 
             latitude:
                 stray['latitude'] != null
-                    ? (stray['latitude']
-                            as num)
-                        .toDouble()
+                    ? (stray['latitude'] as num).toDouble()
                     : null,
 
             longitude:
                 stray['longitude'] != null
-                    ? (stray['longitude']
-                            as num)
-                        .toDouble()
+                    ? (stray['longitude'] as num).toDouble()
                     : null,
 
-            status:
-                stray['status']?.toString(),
+            status: stray['status']?.toString(),
 
-            username: profile != null
-                ? profile['username']
-                    ?.toString()
-                : null,
+            username: profile != null ? profile['username']?.toString() : null,
 
-            profilePhotoUrl: profile != null
-                ? profile['profilePhotoUrl']
-                    ?.toString()
-                : null,
+            profilePhotoUrl:
+                profile != null ? profile['profilePhotoUrl']?.toString() : null,
 
             imageUrls: imageUrls,
 
-            createdAt: DateTime.parse(
-              stray['created_at'].toString(),
-            ),
+            createdAt: DateTime.parse(stray['created_at'].toString()),
 
-            likeCount:
-                reactions.length,
+            likeCount: reactions.length,
 
-            commentCount:
-                comments.length,
+            commentCount: comments.length,
 
             isStray: true,
           ),
@@ -1435,10 +1296,7 @@ class _LikesTabState extends State<_LikesTab> {
       // SORT
       // ============================================================
 
-      likes.sort(
-        (a, b) =>
-            b.createdAt.compareTo(a.createdAt),
-      );
+      likes.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
       if (!mounted) return;
 
@@ -1456,31 +1314,23 @@ class _LikesTabState extends State<_LikesTab> {
         _isLoading = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Failed to load likes: $e',
-          ),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to load likes: $e')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
+      return const Center(child: CircularProgressIndicator());
     }
 
     if (_likes.isEmpty) {
       return const Center(
         child: Text(
           'No liked posts or stray reports yet.',
-          style: TextStyle(
-            color: AppColors.textSecondary,
-          ),
+          style: TextStyle(color: AppColors.textSecondary),
         ),
       );
     }
@@ -1493,13 +1343,10 @@ class _LikesTabState extends State<_LikesTab> {
 
         itemCount: _likes.length,
 
-        separatorBuilder: (_, __) =>
-            const SizedBox(height: 12),
+        separatorBuilder: (_, __) => const SizedBox(height: 12),
 
         itemBuilder: (context, index) {
-          return _ProfileLikeCard(
-            like: _likes[index],
-          );
+          return _ProfileLikeCard(like: _likes[index]);
         },
       ),
     );
@@ -1513,9 +1360,7 @@ class _LikesTabState extends State<_LikesTab> {
 class _ProfileLikeCard extends StatelessWidget {
   final ProfileLike like;
 
-  const _ProfileLikeCard({
-    required this.like,
-  });
+  const _ProfileLikeCard({required this.like});
 
   @override
   Widget build(BuildContext context) {
@@ -1525,14 +1370,11 @@ class _ProfileLikeCard extends StatelessWidget {
         // STRAY REPORT
         // ==========================================================
 
-        if (like.isStray &&
-            like.strayId != null) {
+        if (like.isStray && like.strayId != null) {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) =>
-                  StrayReportDetailScreen(
-                report: like.toStrayReport(),
-              ),
+              builder:
+                  (_) => StrayReportDetailScreen(report: like.toStrayReport()),
             ),
           );
 
@@ -1546,10 +1388,7 @@ class _ProfileLikeCard extends StatelessWidget {
         if (like.postId != null) {
           Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) =>
-                  PostDetailScreen(
-                postId: like.postId!,
-              ),
+              builder: (_) => PostDetailScreen(postId: like.postId!),
             ),
           );
         }
@@ -1559,28 +1398,21 @@ class _ProfileLikeCard extends StatelessWidget {
         padding: const EdgeInsets.all(12),
 
         decoration: BoxDecoration(
-          border: Border.all(
-            color: AppColors.divider,
-          ),
-          borderRadius:
-              BorderRadius.circular(10),
+          border: Border.all(color: AppColors.divider),
+          borderRadius: BorderRadius.circular(10),
         ),
 
         child: Column(
-          crossAxisAlignment:
-              CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
 
           children: [
             // -------------------------------------------------------
             // TYPE
             // -------------------------------------------------------
-
             Row(
               children: [
                 Icon(
-                  like.isStray
-                      ? Icons.pets_outlined
-                      : Icons.article_outlined,
+                  like.isStray ? Icons.pets_outlined : Icons.article_outlined,
                   size: 16,
                   color: AppColors.primary,
                 ),
@@ -1588,25 +1420,17 @@ class _ProfileLikeCard extends StatelessWidget {
                 const SizedBox(width: 6),
 
                 Text(
-                  like.isStray
-                      ? 'Stray Report'
-                      : 'Community Post',
+                  like.isStray ? 'Stray Report' : 'Community Post',
                   style: const TextStyle(
                     fontSize: 11,
-                    fontWeight:
-                        FontWeight.w700,
-                    color:
-                        AppColors.primary,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
                   ),
                 ),
 
                 const Spacer(),
 
-                const Icon(
-                  Icons.favorite,
-                  size: 16,
-                  color: Colors.red,
-                ),
+                const Icon(Icons.favorite, size: 16, color: Colors.red),
               ],
             ),
 
@@ -1615,35 +1439,27 @@ class _ProfileLikeCard extends StatelessWidget {
             // -------------------------------------------------------
             // IMAGES
             // -------------------------------------------------------
-
             if (like.imageUrls.isNotEmpty)
               SizedBox(
                 height: 160,
 
                 child: ListView.separated(
-                  scrollDirection:
-                      Axis.horizontal,
+                  scrollDirection: Axis.horizontal,
 
-                  itemCount:
-                      like.imageUrls.length,
+                  itemCount: like.imageUrls.length,
 
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(width: 8),
+                  separatorBuilder: (_, __) => const SizedBox(width: 8),
 
-                  itemBuilder:
-                      (context, index) {
+                  itemBuilder: (context, index) {
                     return ClipRRect(
-                      borderRadius:
-                          BorderRadius.circular(
-                              8),
+                      borderRadius: BorderRadius.circular(8),
 
                       child: Image.network(
                         like.imageUrls[index],
                         width: 160,
                         fit: BoxFit.cover,
 
-                        errorBuilder:
-                            (_, __, ___) {
+                        errorBuilder: (_, __, ___) {
                           return const ImagePlaceholderBox(
                             height: 160,
                             width: 160,
@@ -1655,41 +1471,28 @@ class _ProfileLikeCard extends StatelessWidget {
                 ),
               ),
 
-            if (like.imageUrls.isNotEmpty)
-              const SizedBox(height: 8),
+            if (like.imageUrls.isNotEmpty) const SizedBox(height: 8),
 
             // -------------------------------------------------------
             // DESCRIPTION / CAPTION
             // -------------------------------------------------------
-
             if (like.isStray)
               if (like.description != null &&
-                  like.description!
-                      .trim()
-                      .isNotEmpty)
+                  like.description!.trim().isNotEmpty)
                 Text(
                   like.description!,
-                  style: const TextStyle(
-                    fontSize: 13,
-                  ),
+                  style: const TextStyle(fontSize: 13),
                   maxLines: 3,
-                  overflow:
-                      TextOverflow.ellipsis,
+                  overflow: TextOverflow.ellipsis,
                 ),
 
             if (!like.isStray)
-              if (like.caption != null &&
-                  like.caption!
-                      .trim()
-                      .isNotEmpty)
+              if (like.caption != null && like.caption!.trim().isNotEmpty)
                 Text(
                   like.caption!,
-                  style: const TextStyle(
-                    fontSize: 13,
-                  ),
+                  style: const TextStyle(fontSize: 13),
                   maxLines: 3,
-                  overflow:
-                      TextOverflow.ellipsis,
+                  overflow: TextOverflow.ellipsis,
                 ),
 
             const SizedBox(height: 8),
@@ -1697,27 +1500,22 @@ class _ProfileLikeCard extends StatelessWidget {
             // -------------------------------------------------------
             // STATS
             // -------------------------------------------------------
-
             Text(
               '${like.likeCount} Likes   '
               '${like.commentCount} Comments',
               style: const TextStyle(
                 fontSize: 11,
-                color:
-                    AppColors.textSecondary,
+                color: AppColors.textSecondary,
               ),
             ),
 
             const SizedBox(height: 4),
 
             Text(
-              formatProfileDate(
-                like.createdAt,
-              ),
+              formatProfileDate(like.createdAt),
               style: const TextStyle(
                 fontSize: 11,
-                color:
-                    AppColors.textSecondary,
+                color: AppColors.textSecondary,
               ),
             ),
           ],
@@ -1731,21 +1529,12 @@ class _ProfileLikeCard extends StatelessWidget {
 // DATE HELPERS
 // ===========================================================================
 
-String formatProfileDate(
-  DateTime createdAt,
-) {
-  final malaysiaTime =
-      createdAt.toUtc().add(
-        const Duration(hours: 8),
-      );
+String formatProfileDate(DateTime createdAt) {
+  final malaysiaTime = createdAt.toUtc().add(const Duration(hours: 8));
 
-  final now =
-      DateTime.now().toUtc().add(
-        const Duration(hours: 8),
-      );
+  final now = DateTime.now().toUtc().add(const Duration(hours: 8));
 
-  final difference =
-      now.difference(malaysiaTime);
+  final difference = now.difference(malaysiaTime);
 
   if (difference.inSeconds < 60) {
     return 'Just now';

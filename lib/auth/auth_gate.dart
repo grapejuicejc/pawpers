@@ -12,8 +12,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../screens/home_screen.dart';
 import '../screens/login.dart';
 import '../screens/forgot_password.dart';
-import '../screens/forgot_password.dart'; 
-import '../screens/admin/admin_home.dart'; 
+import '../screens/forgot_password.dart';
+import '../screens/admin/admin_home.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -33,7 +33,7 @@ class AuthGate extends StatelessWidget {
           );
         }
 
-         final event = snapshot.data?.event;
+        final event = snapshot.data?.event;
 
         // Password recovery session: show reset screen, not HomeScreen
         if (event == AuthChangeEvent.passwordRecovery) {
@@ -43,12 +43,11 @@ class AuthGate extends StatelessWidget {
         //check if there is a valid session currently
         final session = snapshot.hasData ? snapshot.data!.session : null;
 
-        if (session != null) {
-          return const HomeScreen();
-        } else {
+        if (session == null) {
           return const LoginScreen();
+        } else {
+          return _RoleRouter(userId: session.user.id);
         }
-        //return _RoleRouter(userId: session.user.id); got error
       },
     );
   }
@@ -69,11 +68,12 @@ class _RoleRouterState extends State<_RoleRouter> {
   @override
   void initState() {
     super.initState();
-    _profileFuture = Supabase.instance.client
-        .from('profiles')
-        .select('role')
-        .eq('id', widget.userId)
-        .maybeSingle();
+    _profileFuture =
+        Supabase.instance.client
+            .from('profiles')
+            .select('role')
+            .eq('id', widget.userId)
+            .maybeSingle();
   }
 
   @override

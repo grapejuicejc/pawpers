@@ -41,25 +41,33 @@ class _VetVerificationScreenState extends State<VetVerificationScreen> {
       );
     }
 
-    setState(() => _pickedFiles = validFiles);
+    setState(() {
+      // Append instead of replace, and skip duplicates (same name + size).
+      for (final file in validFiles) {
+        final alreadyAdded = _pickedFiles.any(
+          (f) => f.name == file.name && f.size == file.size,
+        );
+        if (!alreadyAdded) _pickedFiles.add(file);
+      }
+    });
   }
 
-  void _goToStepTwo() {
-    if (_pickedFiles.isEmpty) {
-      setState(() => _errorText = 'Please upload at least one document.');
-      return;
-    }
-    if (_clinicNameController.text.trim().isEmpty) {
-      setState(() => _errorText = 'Please enter your clinic name.');
-      return;
-    }
+  // void _goToStepTwo() {
+  //   if (_pickedFiles.isEmpty) {
+  //     setState(() => _errorText = 'Please upload at least one document.');
+  //     return;
+  //   }
+  //   if (_clinicNameController.text.trim().isEmpty) {
+  //     setState(() => _errorText = 'Please enter your clinic name.');
+  //     return;
+  //   }
 
-    setState(() => _errorText = null);
-    _pageController.nextPage(
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeInOut,
-    );
-  }
+  //   setState(() => _errorText = null);
+  //   _pageController.nextPage(
+  //     duration: const Duration(milliseconds: 250),
+  //     curve: Curves.easeInOut,
+  //   );
+  // }
 
   Future<List<String>> _uploadDocuments(String userId) async {
     final supabase = Supabase.instance.client;
@@ -85,15 +93,22 @@ class _VetVerificationScreenState extends State<VetVerificationScreen> {
   }
 
   Future<void> _submitRequest() async {
-    if (!_acceptedTerms) {
-      setState(() => _errorText = 'Please accept the Terms & Conditions.');
+      if (_pickedFiles.isEmpty) {
+      setState(() => _errorText = 'Please upload at least one document.');
       return;
-    }
-    if (_contactController.text.trim().isEmpty) {
-      setState(() => _errorText = 'Please enter a contact number.');
-      return;
-    }
-
+      }
+      if (_clinicNameController.text.trim().isEmpty) {
+        setState(() => _errorText = 'Please enter your clinic name.');
+        return;
+      }
+      if (_contactController.text.trim().isEmpty) {
+        setState(() => _errorText = 'Please enter a contact number.');
+        return;
+      }
+      if (!_acceptedTerms) {
+        setState(() => _errorText = 'Please accept the Terms & Conditions.');
+        return;
+      }
     setState(() {
       _isSubmitting = true;
       _errorText = null;
@@ -134,188 +149,156 @@ class _VetVerificationScreenState extends State<VetVerificationScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Veterinarian Verification')),
       body: SafeArea(
-        child: PageView(
-          controller: _pageController,
-          physics: const NeverScrollableScrollPhysics(),
-          children: [_buildStepOne(), _buildStepTwo()],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStepOne() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _sectionLabel('Upload Documents'),
-          const Text(
-            'Please upload your veterinary license, clinic registration, or other relevant credentials.',
-            style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
-          ),
-          const SizedBox(height: 10),
-          GestureDetector(
-            onTap: _pickFiles,
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              decoration: BoxDecoration(
-                border: Border.all(color: AppColors.divider),
-                borderRadius: BorderRadius.circular(10),
-                color: AppColors.background,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _sectionLabel('Upload Documents'),
+              const Text(
+                'Please upload your veterinary license, clinic registration, or other relevant credentials.',
+                style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
               ),
-              child: Column(
-                children: [
-                  const Icon(Icons.upload_outlined, size: 28),
-                  const SizedBox(height: 10),
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const Text('Upload Files',
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 10),
+              GestureDetector(
+                onTap: _pickFiles,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 24),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppColors.divider),
+                    borderRadius: BorderRadius.circular(10),
+                    color: AppColors.background,
                   ),
-                  const SizedBox(height: 8),
-                  const Text('PDF, JPG, or PNG (Max 5MB)',
-                      style: TextStyle(
-                          fontSize: 11, color: AppColors.textSecondary)),
-                ],
-              ),
-            ),
-          ),
-          if (_pickedFiles.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            ..._pickedFiles.map(
-              (f) => ListTile(
-                dense: true,
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.description_outlined, size: 18),
-                title: Text(f.name, style: const TextStyle(fontSize: 12)),
-                trailing: IconButton(
-                  icon: const Icon(Icons.close, size: 16),
-                  onPressed: () => setState(() => _pickedFiles.remove(f)),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.upload_outlined, size: 28),
+                      const SizedBox(height: 10),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 20, vertical: 10),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text('Upload Files',
+                            style: TextStyle(
+                                color: Colors.white, fontWeight: FontWeight.w700)),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text('PDF, JPG, or PNG (Max 5MB)',
+                          style: TextStyle(
+                              fontSize: 11, color: AppColors.textSecondary)),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
-          const SizedBox(height: 20),
-          _sectionLabel('Clinic Name'),
-          TextField(
-            controller: _clinicNameController,
-            decoration: const InputDecoration(hintText: 'e.g PetWise Animal Clinic'),
-          ),
-          const SizedBox(height: 14),
-          _sectionLabel('Clinic Address'),
-          TextField(controller: _clinicAddressController),
-          const SizedBox(height: 14),
-          _sectionLabel('Contact No.'),
-          TextField(
-            controller: _contactController,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(hintText: '+6012-345 6789'),
-          ),
-          if (_errorText != null) ...[
-            const SizedBox(height: 10),
-            Text(_errorText!,
-                style: const TextStyle(color: AppColors.danger, fontSize: 12)),
-          ],
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(onPressed: _goToStepTwo, child: const Text('Next')),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStepTwo() {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _sectionLabel('Contact No.'),
-          TextField(
-            controller: _contactController,
-            keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(hintText: '+6012-345 6789'),
-          ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: AppColors.background,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: AppColors.divider),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text('Terms & Conditions',
-                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
-                const SizedBox(height: 8),
-                const Text(
-                  'By submitting this request, you confirm the documents provided are authentic and belong to you. False submissions may result in account suspension.',
-                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
-                ),
+              if (_pickedFiles.isNotEmpty) ...[
                 const SizedBox(height: 10),
-                Row(
-                  children: [
-                    Checkbox(
-                      value: _acceptedTerms,
-                      onChanged: (v) => setState(() => _acceptedTerms = v ?? false),
+                ..._pickedFiles.map(
+                  (f) => ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.description_outlined, size: 18),
+                    title: Text(f.name, style: const TextStyle(fontSize: 12)),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.close, size: 16),
+                      onPressed: () => setState(() => _pickedFiles.remove(f)),
                     ),
-                    const Expanded(
-                      child: Text('I have read and I accept.',
-                          style: TextStyle(fontSize: 12)),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              _sectionLabel('Clinic Name'),
+              TextField(
+                controller: _clinicNameController,
+                decoration:
+                    const InputDecoration(hintText: 'e.g PetWise Animal Clinic'),
+              ),
+              const SizedBox(height: 14),
+              _sectionLabel('Clinic Address'),
+              TextField(controller: _clinicAddressController),
+              const SizedBox(height: 14),
+              _sectionLabel('Contact No.'),
+              TextField(
+                controller: _contactController,
+                keyboardType: TextInputType.phone,
+                decoration: const InputDecoration(hintText: '+6012-345 6789'),
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: AppColors.background,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppColors.divider),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Terms & Conditions',
+                        style:
+                            TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'By submitting this request, you confirm the documents provided are authentic and belong to you. False submissions may result in account suspension.',
+                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _acceptedTerms,
+                          onChanged: (v) =>
+                              setState(() => _acceptedTerms = v ?? false),
+                        ),
+                        const Expanded(
+                          child: Text('I have read and I accept.',
+                              style: TextStyle(fontSize: 12)),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
-          if (_errorText != null) ...[
-            const SizedBox(height: 10),
-            Text(_errorText!,
-                style: const TextStyle(color: AppColors.danger, fontSize: 12)),
-          ],
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _isSubmitting
-                      ? null
-                      : () => _pageController.previousPage(
-                            duration: const Duration(milliseconds: 250),
-                            curve: Curves.easeInOut,
-                          ),
-                  child: const Text('Cancel'),
-                ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent),
-                  onPressed: _isSubmitting ? null : _submitRequest,
-                  child: _isSubmitting
-                      ? const SizedBox(
-                          height: 18,
-                          width: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Text('Submit Request'),
-                ),
+              if (_errorText != null) ...[
+                const SizedBox(height: 10),
+                Text(_errorText!,
+                    style: const TextStyle(color: AppColors.danger, fontSize: 12)),
+              ],
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed:
+                          _isSubmitting ? null : () => Navigator.of(context).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color.fromARGB(255, 253, 231, 159),
+                        foregroundColor: Colors.black,
+                      ),
+                      onPressed: _isSubmitting ? null : _submitRequest,
+                      child: _isSubmitting
+                          ? const SizedBox(
+                              height: 18,
+                              width: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                              
+                            )
+                          : const Text('Submit'),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }

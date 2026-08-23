@@ -388,18 +388,43 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
                 ],
               ),
 
-              IconButton(
-                onPressed:
-                    () => Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (_) => const NotificationsScreen(),
+              StreamBuilder<List<Map<String, dynamic>>>(
+                stream: Supabase.instance.client
+                    .from('notifications')
+                    .stream(primaryKey: ['id'])
+                    .eq('user_id', Supabase.instance.client.auth.currentUser!.id),
+                builder: (context, snapshot) {
+                  final unreadCount =
+                      (snapshot.data ?? []).where((n) => n['is_read'] == false).length;
+
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.notifications_outlined),
+                        onPressed: () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                        ),
                       ),
-                    ),
-                icon: const Icon(
-                  Icons.notifications_outlined,
-                  color: AppColors.primary,
-                ),
-              ),
+                      if (unreadCount > 0)
+                        Positioned(
+                          right: 4,
+                          top: 4,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                            child: Text(
+                              '$unreadCount',
+                              style: const TextStyle(color: Colors.white, fontSize: 9),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              )
             ],
           ),
         ),

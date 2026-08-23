@@ -46,18 +46,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
       // Navigator.of(context).pushReplacementNamed('/home');
     } on AuthException catch (e) {
-        if (!mounted) return;
+      if (!mounted) return;
 
-        setState(() {
-          if (e.message.toLowerCase().contains('invalid login credentials')) {
-            _errorText = 'Incorrect email or password.';
-          } else if (e.message.toLowerCase().contains('email not confirmed')) {
-            _errorText = 'Please confirm your email before logging in.';
-          } else {
-            _errorText = e.message;
-          }
-        });
+      setState(() {
+        if (e.message.toLowerCase().contains('invalid login credentials')) {
+          _errorText = 'Incorrect email or password.';
+        } else if (e.message.toLowerCase().contains('email not confirmed')) {
+          _errorText = 'Please confirm your email before logging in.';
+        } else {
+          _errorText = e.message;
+        }
+      });
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
       }
+    }
   }
 
   @override
@@ -118,7 +122,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         builder: (_) => const ForgotPasswordScreen(),
                       ),
                     );
-                
                   },
                   child: const Text(
                     'Forgot Password?',

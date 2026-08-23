@@ -43,6 +43,7 @@ class PostComment {
    final String repliedToCaptionPreview;
   final String? postImageUrl;
   final String? postCaption;
+  final String? parentCommentId;
 
   PostComment({
     required this.id,
@@ -55,5 +56,6 @@ class PostComment {
     required this.repliedToCaptionPreview,
     this.postImageUrl,
     this.postCaption,
+    this.parentCommentId,
   });
 }
