@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../../app_theme.dart';
 
 class StrayReportCommentsScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class StrayReportCommentsScreen extends StatefulWidget {
 
 class _StrayReportCommentsScreenState
     extends State<StrayReportCommentsScreen> {
+
   final TextEditingController _commentController =
       TextEditingController();
 
@@ -24,6 +26,9 @@ class _StrayReportCommentsScreenState
 
   bool _isLoading = true;
   bool _isSending = false;
+
+  // The comment that the user is replying to.
+  Map<String, dynamic>? _replyingTo;
 
   @override
   void initState() {
@@ -37,9 +42,9 @@ class _StrayReportCommentsScreenState
     super.dispose();
   }
 
-  // ------------------------------------------------------------
+  // ============================================================
   // FETCH COMMENTS
-  // ------------------------------------------------------------
+  // ============================================================
 
   Future<void> _fetchComments() async {
     try {
@@ -53,6 +58,7 @@ class _StrayReportCommentsScreenState
             userID,
             comment,
             created_at,
+            parentCommentId,
 
             profiles (
               username,
@@ -65,9 +71,11 @@ class _StrayReportCommentsScreenState
       if (!mounted) return;
 
       setState(() {
-        _comments = List<Map<String, dynamic>>.from(data);
+        _comments =
+            List<Map<String, dynamic>>.from(data);
         _isLoading = false;
       });
+
     } catch (e) {
       print('Error fetching stray comments: $e');
 
@@ -87,24 +95,70 @@ class _StrayReportCommentsScreenState
     }
   }
 
-  // ------------------------------------------------------------
-  // ADD COMMENT
-  // ------------------------------------------------------------
+  // ============================================================
+  // START REPLY
+  // ============================================================
+
+  void _startReply(Map<String, dynamic> comment) {
+
+    final profile = comment['profiles'];
+
+    final username =
+        profile?['username']?.toString() ??
+        'Unknown User';
+
+    setState(() {
+      _replyingTo = comment;
+
+      _commentController.text =
+          '@$username ';
+
+      _commentController.selection =
+          TextSelection.fromPosition(
+        TextPosition(
+          offset: _commentController.text.length,
+        ),
+      );
+    });
+  }
+
+  // ============================================================
+  // CANCEL REPLY
+  // ============================================================
+
+  void _cancelReply() {
+    setState(() {
+      _replyingTo = null;
+      _commentController.clear();
+    });
+  }
+
+  // ============================================================
+  // ADD COMMENT / REPLY
+  // ============================================================
 
   Future<void> _addComment() async {
-    final text = _commentController.text.trim();
+
+    final text =
+        _commentController.text.trim();
 
     if (text.isEmpty) return;
 
-    final supabase = Supabase.instance.client;
-    final user = supabase.auth.currentUser;
+    final supabase =
+        Supabase.instance.client;
+
+    final user =
+        supabase.auth.currentUser;
 
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Please log in to comment.'),
+          content: Text(
+            'Please log in to comment.',
+          ),
         ),
       );
+
       return;
     }
 
@@ -113,19 +167,52 @@ class _StrayReportCommentsScreenState
     });
 
     try {
+
+      final Map<String, dynamic> insertData = {
+        'strayID': widget.strayId,
+        'userID': user.id,
+        'comment': text,
+      };
+
+      // ----------------------------------------------------------
+      // IF THIS IS A REPLY
+      // ----------------------------------------------------------
+
+      if (_replyingTo != null) {
+
+        insertData['parentCommentId'] =
+            _replyingTo!['commentID'];
+      }
+
+      // ----------------------------------------------------------
+      // INSERT
+      // ----------------------------------------------------------
+
       await supabase
           .from('StrayReportComments')
-          .insert({
-            'strayID': widget.strayId,
-            'userID': user.id,
-            'comment': text,
-          });
+          .insert(insertData);
+
+      // ----------------------------------------------------------
+      // CLEAR INPUT
+      // ----------------------------------------------------------
 
       _commentController.clear();
 
+      setState(() {
+        _replyingTo = null;
+      });
+
+      // ----------------------------------------------------------
+      // REFRESH
+      // ----------------------------------------------------------
+
       await _fetchComments();
+
     } catch (e) {
-      print('Error adding stray comment: $e');
+
+      print(
+        'Error adding stray comment: $e',
+      );
 
       if (!mounted) return;
 
@@ -136,7 +223,9 @@ class _StrayReportCommentsScreenState
           ),
         ),
       );
+
     } finally {
+
       if (mounted) {
         setState(() {
           _isSending = false;
@@ -145,13 +234,26 @@ class _StrayReportCommentsScreenState
     }
   }
 
-  // ------------------------------------------------------------
-  // UI
-  // ------------------------------------------------------------
+  // ============================================================
+  // BUILD
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
+
+    // ----------------------------------------------------------
+    // ONLY TOP-LEVEL COMMENTS
+    // ----------------------------------------------------------
+
+    final topLevelComments =
+        _comments.where((comment) {
+
+      return comment['parentCommentId'] == null;
+
+    }).toList();
+
     return Scaffold(
+
       appBar: AppBar(
         title: const Text(
           'Comments',
@@ -163,196 +265,282 @@ class _StrayReportCommentsScreenState
 
       body: Column(
         children: [
+
+          // ======================================================
+          // COMMENTS
+          // ======================================================
+
           Expanded(
+
             child: _isLoading
+
                 ? const Center(
-                    child: CircularProgressIndicator(),
+                    child:
+                        CircularProgressIndicator(),
                   )
+
                 : _comments.isEmpty
+
                     ? const Center(
                         child: Text(
-                          'No comments yet.\nBe the first to comment!',
-                          textAlign: TextAlign.center,
+                          'No comments yet.\n'
+                          'Be the first to comment!',
+                          textAlign:
+                              TextAlign.center,
                           style: TextStyle(
-                            color: AppColors.textSecondary,
+                            color:
+                                AppColors.textSecondary,
                           ),
                         ),
                       )
+
                     : ListView.separated(
-                        padding: const EdgeInsets.all(16),
-                        itemCount: _comments.length,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(height: 16),
-                        itemBuilder: (context, index) {
-                          final comment = _comments[index];
 
-                          final profile =
-                              comment['profiles'];
+                        padding:
+                            const EdgeInsets.all(16),
 
-                          final username =
-                              profile?['username']
-                                      ?.toString() ??
-                                  'Unknown User';
+                        itemCount:
+                            topLevelComments.length,
 
-                          final profilePhoto =
-                              profile?['profilePhotoUrl']
-                                      ?.toString();
+                        separatorBuilder:
+                            (_, __) =>
+                                const SizedBox(
+                          height: 16,
+                        ),
 
-                          final commentText =
-                              comment['comment']
-                                      ?.toString() ??
-                                  '';
+                        itemBuilder:
+                            (context, index) {
 
-                          return Row(
+                          final comment =
+                              topLevelComments[index];
+
+                          // ------------------------------------------------
+                          // FIND REPLIES
+                          // ------------------------------------------------
+
+                          final replies =
+                              _comments.where(
+                            (reply) {
+
+                              return reply[
+                                    'parentCommentId'
+                                  ]?.toString() ==
+                                  comment[
+                                    'commentID'
+                                  ]?.toString();
+
+                            },
+                          ).toList();
+
+                          return Column(
                             crossAxisAlignment:
                                 CrossAxisAlignment.start,
+
                             children: [
-                              CircleAvatar(
-                                radius: 18,
-                                backgroundColor:
-                                    AppColors.placeholder,
-                                backgroundImage:
-                                    profilePhoto != null &&
-                                            profilePhoto
-                                                .isNotEmpty
-                                        ? NetworkImage(
-                                            profilePhoto,
-                                          )
-                                        : null,
-                                child:
-                                    profilePhoto == null ||
-                                            profilePhoto
-                                                .isEmpty
-                                        ? const Icon(
-                                            Icons.person,
-                                            size: 20,
-                                            color: AppColors
-                                                .textSecondary,
-                                          )
-                                        : null,
+
+                              // ==================================================
+                              // MAIN COMMENT
+                              // ==================================================
+
+                              _buildComment(
+                                comment,
+                                isReply: false,
                               ),
 
-                              const SizedBox(width: 10),
+                              // ==================================================
+                              // REPLIES
+                              // ==================================================
 
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      username,
-                                      style:
-                                          const TextStyle(
-                                        fontWeight:
-                                            FontWeight.w700,
-                                        fontSize: 13,
-                                      ),
-                                    ),
+                              if (replies.isNotEmpty)
 
-                                    const SizedBox(
-                                      height: 3,
-                                    ),
+                                Padding(
+                                  padding:
+                                      const EdgeInsets.only(
+                                    left: 42,
+                                    top: 8,
+                                  ),
 
-                                    Text(
-                                      commentText,
-                                      style:
-                                          const TextStyle(
-                                        fontSize: 13,
-                                      ),
-                                    ),
+                                  child: Column(
+                                    children:
+                                        replies.map(
+                                      (reply) {
 
-                                    const SizedBox(
-                                      height: 4,
-                                    ),
+                                        return Padding(
+                                          padding:
+                                              const EdgeInsets.only(
+                                            bottom: 12,
+                                          ),
 
-                                    Text(
-                                      _formatCommentTime(
-                                        comment['created_at'],
-                                      ),
-                                      style:
-                                          const TextStyle(
-                                        fontSize: 10,
-                                        color: AppColors
-                                            .textSecondary,
-                                      ),
-                                    ),
-                                  ],
+                                          child:
+                                              _buildComment(
+                                            reply,
+                                            isReply: true,
+                                          ),
+                                        );
+                                      },
+                                    ).toList(),
+                                  ),
                                 ),
-                              ),
                             ],
                           );
                         },
                       ),
           ),
 
-          // ------------------------------------------------------
-          // COMMENT INPUT
-          // ------------------------------------------------------
+          // ======================================================
+          // INPUT
+          // ======================================================
 
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(
+              padding:
+                  const EdgeInsets.fromLTRB(
                 12,
                 8,
                 12,
                 8,
               ),
-              child: Row(
+
+              child: Column(
+                mainAxisSize:
+                    MainAxisSize.min,
+
                 children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _commentController,
-                      textInputAction:
-                          TextInputAction.send,
-                      onSubmitted: (_) {
-                        if (!_isSending) {
-                          _addComment();
-                        }
-                      },
-                      decoration: InputDecoration(
-                        hintText:
-                            'Write a comment...',
-                        filled: true,
-                        fillColor:
-                            AppColors.chipGrey,
-                        border: OutlineInputBorder(
-                          borderRadius:
-                              BorderRadius.circular(
-                            24,
+
+                  // ==================================================
+                  // REPLYING TO
+                  // ==================================================
+
+                  if (_replyingTo != null)
+
+                    Padding(
+                      padding:
+                          const EdgeInsets.only(
+                        bottom: 6,
+                        left: 8,
+                        right: 8,
+                      ),
+
+                      child: Row(
+                        children: [
+
+                          Expanded(
+                            child: Text(
+                              'Replying to @${_getUsername(_replyingTo!)}',
+
+                              style:
+                                  const TextStyle(
+                                fontSize: 12,
+                                color:
+                                    AppColors.textSecondary,
+                                fontWeight:
+                                    FontWeight.w600,
+                              ),
+                            ),
                           ),
-                          borderSide:
-                              BorderSide.none,
-                        ),
-                        contentPadding:
-                            const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 10,
-                        ),
+
+                          GestureDetector(
+                            onTap:
+                                _cancelReply,
+
+                            child:
+                                const Icon(
+                              Icons.close,
+                              size: 18,
+                              color:
+                                  AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
 
-                  const SizedBox(width: 8),
+                  // ==================================================
+                  // TEXT FIELD
+                  // ==================================================
 
-                  IconButton(
-                    onPressed:
-                        _isSending
-                            ? null
-                            : _addComment,
-                    icon: _isSending
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child:
-                                CircularProgressIndicator(
-                              strokeWidth: 2,
+                  Row(
+                    children: [
+
+                      Expanded(
+                        child: TextField(
+                          controller:
+                              _commentController,
+
+                          textInputAction:
+                              TextInputAction.send,
+
+                          onSubmitted: (_) {
+
+                            if (!_isSending) {
+                              _addComment();
+                            }
+                          },
+
+                          decoration:
+                              InputDecoration(
+
+                            hintText:
+                                _replyingTo != null
+                                    ? 'Write a reply...'
+                                    : 'Write a comment...',
+
+                            filled: true,
+
+                            fillColor:
+                                AppColors.chipGrey,
+
+                            border:
+                                OutlineInputBorder(
+                              borderRadius:
+                                  BorderRadius.circular(
+                                24,
+                              ),
+
+                              borderSide:
+                                  BorderSide.none,
                             ),
-                          )
-                        : const Icon(
-                            Icons.send,
-                            color:
-                                AppColors.primary,
+
+                            contentPadding:
+                                const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
                           ),
+                        ),
+                      ),
+
+                      const SizedBox(
+                        width: 8,
+                      ),
+
+                      IconButton(
+
+                        onPressed:
+                            _isSending
+                                ? null
+                                : _addComment,
+
+                        icon:
+
+                            _isSending
+
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child:
+                                        CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+
+                                : const Icon(
+                                    Icons.send,
+                                    color:
+                                        AppColors.primary,
+                                  ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -363,16 +551,214 @@ class _StrayReportCommentsScreenState
     );
   }
 
-  String _formatCommentTime(dynamic value) {
+  // ============================================================
+  // COMMENT WIDGET
+  // ============================================================
+
+  Widget _buildComment(
+    Map<String, dynamic> comment, {
+    required bool isReply,
+  }) {
+
+    final profile =
+        comment['profiles'];
+
+    final username =
+        profile?['username']
+                ?.toString() ??
+            'Unknown User';
+
+    final profilePhoto =
+        profile?['profilePhotoUrl']
+                ?.toString();
+
+    final commentText =
+        comment['comment']
+                ?.toString() ??
+            '';
+
+    return Row(
+      crossAxisAlignment:
+          CrossAxisAlignment.start,
+
+      children: [
+
+        // ========================================================
+        // PROFILE PHOTO
+        // ========================================================
+
+        CircleAvatar(
+
+          radius:
+              isReply ? 16 : 18,
+
+          backgroundColor:
+              AppColors.placeholder,
+
+          backgroundImage:
+
+              profilePhoto != null &&
+                      profilePhoto.isNotEmpty
+
+                  ? NetworkImage(
+                      profilePhoto,
+                    )
+
+                  : null,
+
+          child:
+
+              profilePhoto == null ||
+                      profilePhoto.isEmpty
+
+                  ? Icon(
+                      Icons.person,
+                      size:
+                          isReply ? 16 : 20,
+                      color:
+                          AppColors.textSecondary,
+                    )
+
+                  : null,
+        ),
+
+        const SizedBox(
+          width: 10,
+        ),
+
+        // ========================================================
+        // COMMENT CONTENT
+        // ========================================================
+
+        Expanded(
+          child: Column(
+            crossAxisAlignment:
+                CrossAxisAlignment.start,
+
+            children: [
+
+              // USERNAME
+
+              Text(
+                username,
+
+                style: TextStyle(
+                  fontWeight:
+                      FontWeight.w700,
+
+                  fontSize:
+                      isReply ? 13 : 13,
+                ),
+              ),
+
+              const SizedBox(
+                height: 3,
+              ),
+
+              // COMMENT
+
+              Text(
+                commentText,
+
+                style: TextStyle(
+                  fontSize:
+                      isReply ? 13 : 14,
+                ),
+              ),
+
+              const SizedBox(
+                height: 4,
+              ),
+
+              // TIME + REPLY
+
+              Row(
+                children: [
+
+                  Text(
+                    _formatCommentTime(
+                      comment['created_at'],
+                    ),
+
+                    style:
+                        const TextStyle(
+                      fontSize: 10,
+                      color:
+                          AppColors.textSecondary,
+                    ),
+                  ),
+
+                  const SizedBox(
+                    width: 14,
+                  ),
+
+                  GestureDetector(
+
+                    onTap: () {
+                      _startReply(
+                        comment,
+                      );
+                    },
+
+                    child:
+                        const Text(
+                      'Reply',
+
+                      style:
+                          TextStyle(
+                        fontSize: 10,
+                        fontWeight:
+                            FontWeight.w700,
+                        color:
+                            AppColors.primary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ============================================================
+  // GET USERNAME
+  // ============================================================
+
+  String _getUsername(
+    Map<String, dynamic> comment,
+  ) {
+
+    final profile =
+        comment['profiles'];
+
+    return profile?['username']
+            ?.toString() ??
+        'Unknown User';
+  }
+
+  // ============================================================
+  // TIME FORMAT
+  // ============================================================
+
+  String _formatCommentTime(
+    dynamic value,
+  ) {
+
     if (value == null) return '';
 
-    final date = DateTime.parse(
+    final date =
+        DateTime.parse(
       value.toString(),
     ).toLocal();
 
-    final now = DateTime.now();
+    final now =
+        DateTime.now();
 
-    final difference = now.difference(date);
+    final difference =
+        now.difference(date);
 
     if (difference.inSeconds < 60) {
       return 'Just now';
