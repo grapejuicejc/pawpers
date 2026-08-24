@@ -12,6 +12,7 @@ class Post {
   final DateTime createdAt;
   final bool isLiked;
   final List<String> categories;
+  final bool isVerified;
 
   Post({
     required this.id,
@@ -26,6 +27,7 @@ class Post {
     required this.createdAt,
     this.isLiked = false,
     required this.categories,
+    required this.isVerified,
   });
 
   //DATABASE
@@ -40,10 +42,11 @@ class PostComment {
   final String? authorAvatarUrl;
   final String body;
   final DateTime createdAt;
-   final String repliedToCaptionPreview;
+  final String repliedToCaptionPreview;
   final String? postImageUrl;
   final String? postCaption;
   final String? parentCommentId;
+  final bool isVerified;
 
   PostComment({
     required this.id,
@@ -57,5 +60,6 @@ class PostComment {
     this.postImageUrl,
     this.postCaption,
     this.parentCommentId,
+    required this.isVerified,
   });
 }

@@ -62,7 +62,8 @@ class _StrayReportCommentsScreenState
 
             profiles (
               username,
-              profilePhotoUrl
+              profilePhotoUrl,
+              is_verified
             )
           ''')
           .eq('strayID', widget.strayId)
@@ -572,6 +573,8 @@ class _StrayReportCommentsScreenState
         profile?['profilePhotoUrl']
                 ?.toString();
 
+    final isVerified = profile?['is_verified'] == true;
+
     final commentText =
         comment['comment']
                 ?.toString() ??
@@ -636,20 +639,29 @@ class _StrayReportCommentsScreenState
                 CrossAxisAlignment.start,
 
             children: [
-
               // USERNAME
-
-              Text(
-                username,
-
-                style: TextStyle(
-                  fontWeight:
-                      FontWeight.w700,
-
-                  fontSize:
-                      isReply ? 13 : 13,
+             Row(
+              children: [
+                Flexible(
+                  child: Text(
+                    username,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: isReply ? 13 : 13,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
+                if (isVerified) ...[
+                  const SizedBox(width: 4),
+                  Icon(
+                    Icons.verified,
+                    size: isReply ? 12 : 13,
+                    color: AppColors.primary,
+                  ),
+                ],
+              ],
+            ),
 
               const SizedBox(
                 height: 3,

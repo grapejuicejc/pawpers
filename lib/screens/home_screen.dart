@@ -139,7 +139,8 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
 
           profiles (
             username,
-            profilePhotoUrl
+            profilePhotoUrl,
+            is_verified
           ),
 
           PostImages (
@@ -209,6 +210,9 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
                   profile != null
                       ? profile['profilePhotoUrl']?.toString()
                       : null,
+              isVerified: profile != null
+                ? (profile['is_verified'] as bool? ?? false)
+                : false,
               caption: row['caption']?.toString(),
               imageUrl: imageUrls,
               isLiked: isLiked,
@@ -276,7 +280,8 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
 
           profiles (
             username,
-            profilePhotoUrl
+            profilePhotoUrl,
+            is_verified
           ),
 
           StrayReportImages (
@@ -728,15 +733,25 @@ class _StrayReportCardState extends State<_StrayReportCard> {
               const SizedBox(width: 8),
 
               Expanded(
-                child: Text(
-                  report.username ?? 'Unknown User',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                  ),
+                child: Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        report.username ?? 'Unknown User',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (report.isVerified) ...[
+                      const SizedBox(width: 4),
+                      const Icon(Icons.verified, size: 14, color: AppColors.primary),
+                    ],
+                  ],
                 ),
               ),
-
               Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 10,
@@ -1106,6 +1121,15 @@ class _PostCardState extends State<_PostCard> {
                     ),
                   ),
 
+                  if (widget.post.isVerified) ...[
+                    const SizedBox(width: 4),
+                    const Icon(
+                      Icons.verified,
+                      size: 14,
+                      color: AppColors.primary, // or Colors.blue, whatever fits your palette
+                    ),
+                  ],
+
                   const Spacer(),
 
                   // KEYWORDS
@@ -1155,9 +1179,8 @@ class _PostCardState extends State<_PostCard> {
                 );
               },
             ),
-          )
-        else
-          const ImagePlaceholderBox(height: 140),
+          ),
+
 
         const SizedBox(height: 6),
 

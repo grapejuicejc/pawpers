@@ -7,15 +7,13 @@ class StrayReport {
   final String? location;
   final String status;
   final DateTime createdAt;
-
   final String? username;
   final String? profilePhotoUrl;
-
   final List<String> imageUrls;
-
   final bool isLiked;
   final int likeCount;
   final int commentCount;
+  final bool isVerified;
 
   const StrayReport({
     required this.id,
@@ -32,6 +30,7 @@ class StrayReport {
     this.isLiked = false,
     this.likeCount = 0,
     this.commentCount = 0,
+    required this.isVerified,
   });
 
   factory StrayReport.fromJson(
@@ -64,6 +63,7 @@ class StrayReport {
 
       username: profile?['username']?.toString(),
       profilePhotoUrl: profile?['profilePhotoUrl']?.toString(),
+      isVerified: profile != null ? (profile['isVerified'] as bool? ?? false) : false,
 
       imageUrls:
           images
@@ -72,8 +72,8 @@ class StrayReport {
               .toList(),
 
       isLiked: isLiked,
-     likeCount: likeCount,
+      likeCount: likeCount,
       commentCount: commentCount,
-  );
+    );
   }
 }

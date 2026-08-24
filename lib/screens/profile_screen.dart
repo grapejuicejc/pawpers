@@ -8,7 +8,7 @@ import 'login.dart';
 import '../../auth/auth_service.dart';
 import '../../services/supabase_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import '../widgets/logout_confirmation.dart';
 import '../models/post.dart';
 import '../models/stray_report.dart';
 
@@ -33,6 +33,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   String? _bio;
   String? _profilePhotoUrl;
   bool _isVerified = false;
+  bool _hasVerificationRequest = false;
 
   Future<void> _loadProfile() async {
     final profile = await SupabaseService.instance.getCurrentUserProfile();
@@ -43,7 +44,7 @@ class _ProfileScreenState extends State<ProfileScreen>
       _username = profile?['username'];
       _bio = profile?['bio'];
       _profilePhotoUrl = profile?['profilePhotoUrl'];
-       _isVerified = profile?['is_verified'] ?? false; 
+      _isVerified = profile?['is_verified'] ?? false;
     });
   }
 
@@ -54,9 +55,37 @@ class _ProfileScreenState extends State<ProfileScreen>
     _tabController = TabController(length: 3, vsync: this);
 
     _loadProfile();
+    _checkVerificationRequest();
+  }
+
+  Future<void> _checkVerificationRequest() async {
+    try {
+      final user = Supabase.instance.client.auth.currentUser;
+
+      if (user == null) return;
+
+      final request =
+          await Supabase.instance.client
+              .from('vet_verifications')
+              .select('id')
+              .eq('user_id', user.id)
+              .maybeSingle();
+
+      if (!mounted) return;
+
+      setState(() {
+        _hasVerificationRequest = request != null;
+      });
+    } catch (e) {
+      print('Error checking verification request: $e');
+    }
   }
 
   Future<void> _handleLogout() async {
+    final confirmed = await showLogoutConfirmation(context);
+
+    if (confirmed != true) return;
+
     await authService.signOut();
 
     if (!mounted) return;
@@ -105,26 +134,26 @@ class _ProfileScreenState extends State<ProfileScreen>
             // ---------------------------------------------------------
             // USERNAME
             // ---------------------------------------------------------
-           Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _username ?? 'User',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  _username ?? 'User',
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-              if (_isVerified) ...[
-                const SizedBox(width: 4),
-                const Icon(
-                  Icons.verified,
-                  color: Color.fromARGB(255, 8, 51, 126),
-                  size: 18,
-                ),
+                if (_isVerified) ...[
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.verified,
+                    color: Color.fromARGB(255, 8, 51, 126),
+                    size: 18,
+                  ),
+                ],
               ],
-            ],
-          ),
+            ),
 
             Text(
               _bio ?? 'Add a bio',
@@ -212,29 +241,30 @@ class _ProfileScreenState extends State<ProfileScreen>
             // ---------------------------------------------------------
             // VETERINARIAN
             // ---------------------------------------------------------
-            ListTile(
-              leading: const Icon(
-                Icons.verified_outlined,
-                color: AppColors.primary,
-                size: 20,
+            if (!_hasVerificationRequest)
+              ListTile(
+                leading: const Icon(
+                  Icons.verified_outlined,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+                title: const Text(
+                  'Are you a veterinarian?',
+                  style: TextStyle(fontSize: 12),
+                ),
+                subtitle: const Text(
+                  'Click here to Get Verified',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                ),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => VetVerificationScreen(),
+                    ),
+                  );
+                },
               ),
-              title: const Text(
-                'Are you a veterinarian?',
-                style: TextStyle(fontSize: 12),
-              ),
-              subtitle: const Text(
-                'Click here to Get Verified',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-              ),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => VetVerificationScreen(),
-                  ),
-                );
-              },
-            ),
           ],
         ),
 
@@ -298,7 +328,8 @@ class _PostsTabState extends State<_PostsTab> {
 
             profiles (
               username,
-              profilePhotoUrl
+              profilePhotoUrl,
+              is_verified
             ),
 
             PostImages (
@@ -345,6 +376,11 @@ class _PostsTabState extends State<_PostsTab> {
                   profile != null
                       ? profile['profilePhotoUrl']?.toString()
                       : null,
+
+              isVerified:
+                  profile != null
+                      ? (profile['is_verified'] as bool? ?? false)
+                      : false,
 
               caption: row['caption']?.toString(),
 
@@ -399,7 +435,7 @@ class _PostsTabState extends State<_PostsTab> {
         itemCount: _posts.length,
         separatorBuilder: (_, __) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          return _MyPostCard(post: _posts[index]);
+          return _MyPostCard(post: _posts[index], onPostChanged: _fetchMyPosts,);
         },
       ),
     );
@@ -412,16 +448,22 @@ class _PostsTabState extends State<_PostsTab> {
 
 class _MyPostCard extends StatelessWidget {
   final Post post;
+  final VoidCallback onPostChanged;
 
-  const _MyPostCard({required this.post});
+  const _MyPostCard({required this.post, required this.onPostChanged});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.of(context).push(
+      onTap: () async {
+        final result = await Navigator.push(
+          context,
           MaterialPageRoute(builder: (_) => PostDetailScreen(postId: post.id)),
         );
+
+        if (result == true && context.mounted) {
+          onPostChanged();
+        }
       },
 
       child: Container(
@@ -551,6 +593,8 @@ class ProfileLike {
 
   final bool isStray;
 
+  final bool isVerified;
+
   const ProfileLike({
     this.postId,
     this.strayId,
@@ -567,6 +611,7 @@ class ProfileLike {
     required this.likeCount,
     required this.commentCount,
     required this.isStray,
+    required this.isVerified,
   });
 
   // ---------------------------------------------------------------
@@ -589,6 +634,7 @@ class ProfileLike {
       isLiked: true,
       likeCount: likeCount,
       commentCount: commentCount,
+      isVerified: isVerified,
     );
   }
 }
@@ -1051,6 +1097,9 @@ Future<StrayReport?> _fetchStrayReport(String strayId) async {
       profilePhotoUrl:
           profile != null ? profile['profilePhotoUrl']?.toString() : null,
 
+      isVerified:
+          profile != null ? (profile['is_verified'] as bool? ?? false) : false,
+
       imageUrls: imageUrls,
 
       likeCount: reactions.length,
@@ -1224,6 +1273,8 @@ class _LikesTabState extends State<_LikesTab> {
 
             likeCount: reactions.length,
 
+            isVerified: false,
+
             commentCount: comments.length,
 
             isStray: false,
@@ -1278,6 +1329,11 @@ class _LikesTabState extends State<_LikesTab> {
 
             profilePhotoUrl:
                 profile != null ? profile['profilePhotoUrl']?.toString() : null,
+
+            isVerified:
+                profile != null
+                    ? (profile['is_verified'] as bool? ?? false)
+                    : false,
 
             imageUrls: imageUrls,
 
