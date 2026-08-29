@@ -11,7 +11,6 @@ class Comments extends StatefulWidget {
   // this tells us which specific comment to highlight.
   final String? highlightCommentId;
 
-
   const Comments({super.key, required this.postId, this.highlightCommentId});
 
   @override
@@ -20,6 +19,7 @@ class Comments extends StatefulWidget {
 
 class _CommentsState extends State<Comments> {
   final _commentController = TextEditingController();
+  final FocusNode _commentFocusNode = FocusNode(); //for auto open keyboard
 
   List<PostComment> _comments = [];
 
@@ -167,6 +167,28 @@ class _CommentsState extends State<Comments> {
     });
   }
 
+  Future<void> _startReply(PostComment comment) async {
+    // Remove focus first so it can be requested again
+    _commentFocusNode.unfocus();
+
+    setState(() {
+      _replyingTo = comment;
+
+      _commentController.text = '@${comment.authorName} ';
+
+      _commentController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _commentController.text.length),
+      );
+    });
+
+    // Automatically open the keyboard
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted) {
+        _commentFocusNode.requestFocus();
+      }
+    });
+  }
+
   // ---------------------------------------------------------------------------
   // ADD COMMENT
   // ---------------------------------------------------------------------------
@@ -241,6 +263,143 @@ class _CommentsState extends State<Comments> {
     }
   }
 
+Widget _buildReplies(PostComment parent) {
+  final List<PostComment> threadReplies = [];
+
+  void collectReplies(PostComment parentComment) {
+    final children = _comments
+        .where((comment) => comment.parentCommentId == parentComment.id)
+        .toList();
+
+    for (final child in children) {
+      threadReplies.add(child);
+
+      // Find replies to this reply
+      collectReplies(child);
+    }
+  }
+
+  collectReplies(parent);
+
+  if (threadReplies.isEmpty) {
+    return const SizedBox.shrink();
+  }
+
+  return Padding(
+    padding: const EdgeInsets.only(
+      left: 42,
+      top: 6,
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: threadReplies.map((reply) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // PROFILE PHOTO
+              CircleAvatar(
+                radius: 16,
+                backgroundColor: AppColors.placeholder,
+                backgroundImage:
+                    reply.authorAvatarUrl != null &&
+                            reply.authorAvatarUrl!.isNotEmpty
+                        ? NetworkImage(reply.authorAvatarUrl!)
+                        : null,
+                child:
+                    reply.authorAvatarUrl == null ||
+                            reply.authorAvatarUrl!.isEmpty
+                        ? const Icon(
+                            Icons.person,
+                            size: 16,
+                            color: AppColors.textSecondary,
+                          )
+                        : null,
+              ),
+
+              const SizedBox(width: 8),
+
+              // REPLY CONTENT
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // USERNAME
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            reply.authorName,
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w700,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+
+                        if (reply.isVerified) ...[
+                          const SizedBox(width: 4),
+                          const Icon(
+                            Icons.verified,
+                            size: 13,
+                            color: AppColors.primary,
+                          ),
+                        ],
+                      ],
+                    ),
+
+                    const SizedBox(height: 2),
+
+                    // REPLY TEXT
+                    Text(
+                      reply.body,
+                      style: const TextStyle(
+                        fontSize: 13,
+                      ),
+                    ),
+
+                    const SizedBox(height: 3),
+
+                    // TIME + REPLY
+                    Row(
+                      children: [
+                        Text(
+                          formatCommentTime(reply.createdAt),
+                          style: const TextStyle(
+                            fontSize: 10,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+
+                        const SizedBox(width: 14),
+
+                        GestureDetector(
+                          onTap: () {
+                            _startReply(reply);
+                          },
+                          child: const Text(
+                            'Reply',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    ),
+  );
+}
+
   // ---------------------------------------------------------------------------
   // BUILD
   // ---------------------------------------------------------------------------
@@ -282,13 +441,13 @@ class _CommentsState extends State<Comments> {
                         final comment = topLevelComments[index];
 
                         // Find all replies belonging to this comment.
-                        final replies =
-                            _comments
-                                .where(
-                                  (reply) =>
-                                      reply.parentCommentId == comment.id,
-                                )
-                                .toList();
+                        // final replies =
+                        //     _comments
+                        //         .where(
+                        //           (reply) =>
+                        //               reply.parentCommentId == comment.id,
+                        //         )
+                        //         .toList();
 
                         final isHighlighted =
                             comment.id == _highlightedCommentId;
@@ -370,18 +529,18 @@ class _CommentsState extends State<Comments> {
                                                   fontWeight: FontWeight.w700,
                                                 ),
                                                 overflow: TextOverflow.ellipsis,
-                                                ),
                                               ),
-                                               if (comment.isVerified) ...[
-                                                const SizedBox(width: 4),
-                                                const Icon(
-                                                  Icons.verified,
-                                                  size: 13,
-                                                  color: AppColors.primary,
-                                                ),
-                                              ],
+                                            ),
+                                            if (comment.isVerified) ...[
+                                              const SizedBox(width: 4),
+                                              const Icon(
+                                                Icons.verified,
+                                                size: 13,
+                                                color: AppColors.primary,
+                                              ),
                                             ],
-                                          ),
+                                          ],
+                                        ),
 
                                         const SizedBox(height: 3),
 
@@ -409,23 +568,8 @@ class _CommentsState extends State<Comments> {
                                             const SizedBox(width: 16),
 
                                             GestureDetector(
-                                              onTap: () {
-                                                setState(() {
-                                                  _replyingTo = comment;
-
-                                                  _commentController.text =
-                                                      '@${comment.authorName} ';
-
-                                                  _commentController.selection =
-                                                      TextSelection.fromPosition(
-                                                        TextPosition(
-                                                          offset:
-                                                              _commentController
-                                                                  .text
-                                                                  .length,
-                                                        ),
-                                                      );
-                                                });
+                                              onTap: () async {
+                                                _startReply(comment);
                                               },
 
                                               child: const Text(
@@ -448,175 +592,9 @@ class _CommentsState extends State<Comments> {
 
                             // =================================================
                             // REPLIES
-                            // =================================================
-                            if (replies.isNotEmpty)
-                              Padding(
-                                padding: const EdgeInsets.only(
-                                  left: 42,
-                                  top: 6,
-                                ),
-
-                                child: Column(
-                                  children:
-                                      replies.map((reply) {
-                                        return Padding(
-                                          padding: const EdgeInsets.only(
-                                            bottom: 10,
-                                          ),
-
-                                          child: Row(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-
-                                            children: [
-                                              // ---------------------------------
-                                              // REPLY PROFILE PHOTO
-                                              // ---------------------------------
-                                              CircleAvatar(
-                                                radius: 16,
-
-                                                backgroundColor:
-                                                    AppColors.placeholder,
-
-                                                backgroundImage:
-                                                    reply.authorAvatarUrl !=
-                                                                null &&
-                                                            reply
-                                                                .authorAvatarUrl!
-                                                                .isNotEmpty
-                                                        ? NetworkImage(
-                                                          reply
-                                                              .authorAvatarUrl!,
-                                                        )
-                                                        : null,
-
-                                                child:
-                                                    reply.authorAvatarUrl ==
-                                                                null ||
-                                                            reply
-                                                                .authorAvatarUrl!
-                                                                .isEmpty
-                                                        ? const Icon(
-                                                          Icons.person,
-                                                          size: 16,
-                                                          color:
-                                                              AppColors
-                                                                  .textSecondary,
-                                                        )
-                                                        : null,
-                                              ),
-
-                                              const SizedBox(width: 8),
-
-                                              // ---------------------------------
-                                              // REPLY CONTENT
-                                              // ---------------------------------
-                                              Expanded(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-
-                                                  children: [
-                                                    // REPLY USERNAME
-                                                     Row(
-                                                      children: [
-                                                        Flexible(
-                                                          child: Text(
-                                                            comment.authorName,
-                                                            style: const TextStyle(
-                                                              fontWeight: FontWeight.w700,
-                                                            ),
-                                                            overflow: TextOverflow.ellipsis,
-                                                          ),
-                                                        ),
-                                                        if (comment.isVerified) ...[
-                                                          const SizedBox(width: 4),
-                                                          const Icon(
-                                                            Icons.verified,
-                                                            size: 13,
-                                                            color: AppColors.primary,
-                                                          ),
-                                                        ],
-                                                      ],
-                                                    ),
-
-                                                    const SizedBox(height: 2),
-
-                                                    // REPLY TEXT
-                                                    Text(
-                                                      reply.body,
-                                                      style: const TextStyle(
-                                                        fontSize: 13,
-                                                      ),
-                                                    ),
-
-                                                    const SizedBox(height: 3),
-
-                                                    // REPLY TIME + REPLY BUTTON
-                                                    Row(
-                                                      children: [
-                                                        Text(
-                                                          formatCommentTime(
-                                                            reply.createdAt,
-                                                          ),
-                                                          style: const TextStyle(
-                                                            fontSize: 10,
-                                                            color:
-                                                                AppColors
-                                                                    .textSecondary,
-                                                          ),
-                                                        ),
-
-                                                        const SizedBox(
-                                                          width: 14,
-                                                        ),
-
-                                                        GestureDetector(
-                                                          onTap: () {
-                                                            setState(() {
-                                                              _replyingTo =
-                                                                  reply;
-
-                                                              _commentController
-                                                                      .text =
-                                                                  '@${reply.authorName} ';
-
-                                                              _commentController
-                                                                  .selection = TextSelection.fromPosition(
-                                                                TextPosition(
-                                                                  offset:
-                                                                      _commentController
-                                                                          .text
-                                                                          .length,
-                                                                ),
-                                                              );
-                                                            });
-                                                          },
-
-                                                          child: const Text(
-                                                            'Reply',
-                                                            style: TextStyle(
-                                                              fontSize: 10,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w700,
-                                                              color:
-                                                                  AppColors
-                                                                      .primary,
-                                                            ),
-                                                          ),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        );
-                                      }).toList(),
-                                ),
-                              ),
+                            // ==================================================
+                                _buildReplies(comment),
+    
                           ],
                         );
                       },
@@ -656,6 +634,7 @@ class _CommentsState extends State<Comments> {
 
                           GestureDetector(
                             onTap: () {
+                               FocusScope.of(context).unfocus();
                               setState(() {
                                 _replyingTo = null;
                                 _commentController.clear();
@@ -680,6 +659,7 @@ class _CommentsState extends State<Comments> {
                       Expanded(
                         child: TextField(
                           controller: _commentController,
+                          focusNode: _commentFocusNode,
 
                           textInputAction: TextInputAction.send,
 

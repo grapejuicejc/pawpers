@@ -9,7 +9,7 @@ import 'notifications_screen.dart';
 import 'upload_post.dart';
 import 'view_clinics.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'comments.dart';
+import 'post_comments.dart';
 import '../models/stray_report.dart';
 import 'report_stray.dart';
 import 'package:url_launcher/url_launcher.dart';

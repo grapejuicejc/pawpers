@@ -12,7 +12,7 @@ import '../widgets/logout_confirmation.dart';
 import '../models/post.dart';
 import '../models/stray_report.dart';
 
-import 'comments.dart';
+import 'post_comments.dart';
 import 'post_details.dart';
 import 'stray_report_details.dart';
 

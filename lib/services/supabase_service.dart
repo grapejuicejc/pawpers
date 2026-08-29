@@ -133,26 +133,26 @@ class SupabaseService {
   }
 }
 
-Future<void> deleteProfile() async {
-  final user = _client.auth.currentUser;
+// Future<void> deleteProfile() async {
+//   final user = _client.auth.currentUser;
 
-  if (user == null) {
-    throw Exception("No logged in user.");
-  }
+//   if (user == null) {
+//     throw Exception("No logged in user.");
+//   }
 
-  // Delete profile picture
-  await _client.storage
-      .from('profilepictures')
-      .remove([
-        '${user.id}/profile.jpg'
-      ]);
+//   // Delete profile picture
+//   await _client.storage
+//       .from('profilepictures')
+//       .remove([
+//         '${user.id}/profile.jpg'
+//       ]);
 
-  // Delete profile row
-  await _client
-      .from('profiles')
-      .delete()
-      .eq('id', user.id);
-}
+//   // Delete profile row
+//   await _client
+//       .from('profiles')
+//       .delete()
+//       .eq('id', user.id);
+// }
 
   
 }

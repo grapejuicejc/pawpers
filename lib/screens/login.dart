@@ -42,9 +42,10 @@ class _LoginScreenState extends State<LoginScreen> {
     try {
       await authService.signInWithEmailPassword(email, password);
 
-      // if (!mounted) return;
+       if (!mounted) return;
 
-      // Navigator.of(context).pushReplacementNamed('/home');
+      Navigator.of(context).pushReplacementNamed('/home');
+      
     } on AuthException catch (e) {
       if (!mounted) return;
 

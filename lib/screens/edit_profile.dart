@@ -180,7 +180,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     // DB (Supabase):
     try {
       await SupabaseService.instance.deleteAccount();
-      await SupabaseService.instance.deleteProfile();
+      //await SupabaseService.instance.deleteProfile();
 
       if (!mounted) return;
 

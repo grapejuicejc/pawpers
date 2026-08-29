@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../models/post.dart';
 import '../../app_theme.dart';
 import '../../widgets/image_placeholder.dart';
-import 'comments.dart';
+import 'post_comments.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final String postId;

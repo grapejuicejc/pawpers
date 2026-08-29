@@ -51,6 +51,16 @@ Deno.serve(async (req) => {
       );
     }
 
+//     // Delete profile
+//     const { error: profileError } = await supabaseAdmin
+//       .from("profiles")
+//       .delete()
+//       .eq("id", user.id);
+
+//     if (profileError) {
+//       throw new Error(profileError.message);
+// }
+
 
     // Delete the user from auth.users
     const { error: deleteError } =
