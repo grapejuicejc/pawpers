@@ -302,7 +302,8 @@ class _PostsTab extends StatefulWidget {
 }
 
 class _PostsTabState extends State<_PostsTab> {
-  List<Post> _posts = [];
+  List<_ProfilePostItem> _items = [];
+
   bool _isLoading = true;
 
   @override
@@ -311,14 +312,37 @@ class _PostsTabState extends State<_PostsTab> {
     _fetchMyPosts();
   }
 
+  // =========================================================================
+  // FETCH POSTS + STRAY REPORTS
+  // =========================================================================
+
   Future<void> _fetchMyPosts() async {
+    if (mounted) {
+      setState(() {
+        _isLoading = true;
+      });
+    }
+
     try {
       final supabase = Supabase.instance.client;
       final user = supabase.auth.currentUser;
 
-      if (user == null) return;
+      if (user == null) {
+        if (!mounted) return;
 
-      final data = await supabase
+        setState(() {
+          _items = [];
+          _isLoading = false;
+        });
+
+        return;
+      }
+
+      // =====================================================================
+      // COMMUNITY POSTS
+      // =====================================================================
+
+      final postData = await supabase
           .from('Post')
           .select('''
             postID,
@@ -349,22 +373,71 @@ class _PostsTabState extends State<_PostsTab> {
           .eq('userID', user.id)
           .order('created_at', ascending: false);
 
-      final posts =
-          data.map<Post>((row) {
-            final profile = row['profiles'];
+      // =====================================================================
+      // STRAY REPORTS
+      // =====================================================================
 
-            final images = row['PostImages'] as List? ?? [];
-            final reactions = row['PostReactions'] as List? ?? [];
-            final comments = row['PostComments'] as List? ?? [];
+      final strayData = await supabase
+          .from('StrayReports')
+          .select('''
+            strayID,
+            userID,
+            description,
+            latitude,
+            longitude,
+            location,
+            status,
+            created_at,
 
-            final imageUrls =
-                images
-                    .where((image) => image['photoUrl'] != null)
-                    .map<String>((image) => image['photoUrl'].toString())
-                    .toList();
+            profiles (
+              username,
+              profilePhotoUrl,
+              is_verified
+            ),
 
-            return Post(
+            StrayReportImages (
+              imageID,
+              photoUrl
+            ),
+
+            StrayReportReactions (
+              reactionID,
+              userID
+            ),
+
+            StrayReportComments (
+              commentID
+            )
+          ''')
+          .eq('userID', user.id)
+          .order('created_at', ascending: false);
+
+      final List<_ProfilePostItem> items = [];
+
+      // =====================================================================
+      // CONVERT COMMUNITY POSTS
+      // =====================================================================
+
+      for (final row in postData) {
+        final profile = row['profiles'];
+
+        final images = row['PostImages'] as List? ?? [];
+        final reactions = row['PostReactions'] as List? ?? [];
+        final comments = row['PostComments'] as List? ?? [];
+
+        final imageUrls =
+            images
+                .where((image) => image['photoUrl'] != null)
+                .map<String>((image) => image['photoUrl'].toString())
+                .toList();
+
+        items.add(
+          _ProfilePostItem(
+            isStray: false,
+
+            post: Post(
               id: row['postID'].toString(),
+
               authorId: row['userID'].toString(),
 
               authorName:
@@ -390,57 +463,219 @@ class _PostsTabState extends State<_PostsTab> {
 
               commentCount: comments.length,
 
-              categories: List<String>.from(row['category'] ?? []),
+              categories: const [],
 
-              createdAt: DateTime.parse(row['created_at'].toString()),
-            );
-          }).toList();
+              createdAt: DateTime.parse(
+                row['created_at'].toString(),
+              ),
+            ),
+          ),
+        );
+      }
+
+      // =====================================================================
+      // CONVERT STRAY REPORTS
+      // =====================================================================
+
+      for (final row in strayData) {
+        final profile = row['profiles'];
+
+        final images = row['StrayReportImages'] as List? ?? [];
+        final reactions = row['StrayReportReactions'] as List? ?? [];
+        final comments = row['StrayReportComments'] as List? ?? [];
+
+        final imageUrls =
+            images
+                .where((image) => image['photoUrl'] != null)
+                .map<String>((image) => image['photoUrl'].toString())
+                .toList();
+
+        items.add(
+          _ProfilePostItem(
+            isStray: true,
+
+            strayReport: StrayReport(
+              id: row['strayID'].toString(),
+
+              userId: row['userID'].toString(),
+
+              description: row['description']?.toString(),
+
+              latitude: _parseCoordinate(row['latitude']),
+
+              longitude: _parseCoordinate(row['longitude']),
+
+              location: row['location']?.toString(),
+
+              status: row['status']?.toString() ?? 'active',
+
+              createdAt: DateTime.parse(
+                row['created_at'].toString(),
+              ),
+
+              username:
+                  profile != null
+                      ? profile['username']?.toString()
+                      : null,
+
+              profilePhotoUrl:
+                  profile != null
+                      ? profile['profilePhotoUrl']?.toString()
+                      : null,
+
+              isVerified:
+                  profile != null
+                      ? (profile['is_verified'] as bool? ?? false)
+                      : false,
+
+              imageUrls: imageUrls,
+
+              likeCount: reactions.length,
+
+              commentCount: comments.length,
+
+              isLiked: false,
+            ),
+          ),
+        );
+      }
+
+      // =====================================================================
+      // SORT POSTS + STRAY REPORTS TOGETHER
+      // =====================================================================
+
+      items.sort(
+        (a, b) => b.createdAt.compareTo(a.createdAt),
+      );
 
       if (!mounted) return;
 
       setState(() {
-        _posts = posts;
+        _items = items;
         _isLoading = false;
       });
-    } catch (e) {
-      print('Error fetching my posts: $e');
+    } catch (e, stackTrace) {
+      print('ERROR FETCHING MY POSTS/STRAY REPORTS: $e');
+      print(stackTrace);
 
       if (!mounted) return;
 
       setState(() {
+        _items = [];
         _isLoading = false;
       });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to load posts: $e',
+          ),
+        ),
+      );
     }
   }
+
+  // =========================================================================
+  // PARSE LATITUDE / LONGITUDE
+  // =========================================================================
+
+  double? _parseCoordinate(dynamic value) {
+    if (value == null) return null;
+
+    return double.tryParse(value.toString());
+  }
+
+  // =========================================================================
+  // BUILD
+  // =========================================================================
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
     }
 
-    if (_posts.isEmpty) {
+    if (_items.isEmpty) {
       return const Center(
         child: Text(
           'You have not posted anything yet.',
-          style: TextStyle(color: AppColors.textSecondary),
+          style: TextStyle(
+            color: AppColors.textSecondary,
+          ),
         ),
       );
     }
 
     return RefreshIndicator(
       onRefresh: _fetchMyPosts,
+
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
-        itemCount: _posts.length,
+
+        itemCount: _items.length,
+
         separatorBuilder: (_, __) => const SizedBox(height: 12),
+
         itemBuilder: (context, index) {
-          return _MyPostCard(post: _posts[index], onPostChanged: _fetchMyPosts,);
+          final item = _items[index];
+
+          // ---------------------------------------------------------------
+          // STRAY REPORT
+          // ---------------------------------------------------------------
+
+          if (item.isStray && item.strayReport != null) {
+            return _MyStrayReportCard(
+              report: item.strayReport!,
+              onPostChanged: _fetchMyPosts,
+            );
+          }
+
+          // ---------------------------------------------------------------
+          // COMMUNITY POST
+          // ---------------------------------------------------------------
+
+          if (!item.isStray && item.post != null) {
+            return _MyPostCard(
+              post: item.post!,
+              onPostChanged: _fetchMyPosts,
+            );
+          }
+
+          return const SizedBox.shrink();
         },
       ),
     );
   }
 }
+
+// ===========================================================================
+// PROFILE POST ITEM
+// ===========================================================================
+
+class _ProfilePostItem {
+  final bool isStray;
+
+  final Post? post;
+  final StrayReport? strayReport;
+
+  const _ProfilePostItem({
+    required this.isStray,
+    this.post,
+    this.strayReport,
+  });
+
+  DateTime get createdAt {
+    if (isStray && strayReport != null) {
+      return strayReport!.createdAt;
+    }
+
+    return post!.createdAt;
+  }
+}
+
+
 
 // ===========================================================================
 // MY POST CARD
@@ -524,6 +759,212 @@ class _MyPostCard extends StatelessWidget {
             Text(
               '${post.likeCount} Likes   '
               '${post.commentCount} Comments',
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ===========================================================================
+// MY STRAY REPORT CARD
+// ===========================================================================
+
+class _MyStrayReportCard extends StatelessWidget {
+  final StrayReport report;
+  final VoidCallback onPostChanged;
+
+  const _MyStrayReportCard({
+    required this.report,
+    required this.onPostChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () async {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => StrayReportDetailScreen(
+              report: report,
+            ),
+          ),
+        );
+
+        if (context.mounted) {
+          onPostChanged();
+        }
+      },
+
+      child: Container(
+        padding: const EdgeInsets.all(12),
+
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: AppColors.divider,
+          ),
+          borderRadius: BorderRadius.circular(10),
+        ),
+
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+
+          children: [
+            // -------------------------------------------------------------
+            // TYPE + DATE
+            // -------------------------------------------------------------
+
+            Row(
+              children: [
+                const Icon(
+                  Icons.pets_outlined,
+                  size: 16,
+                  color: AppColors.primary,
+                ),
+
+                const SizedBox(width: 5),
+
+                const Text(
+                  'Stray Report',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                  ),
+                ),
+
+                const Spacer(),
+
+                Text(
+                  formatProfileDate(report.createdAt),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            // -------------------------------------------------------------
+            // IMAGES
+            // -------------------------------------------------------------
+
+            if (report.imageUrls.isNotEmpty)
+              SizedBox(
+                height: 160,
+
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+
+                  itemCount: report.imageUrls.length,
+
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(width: 8),
+
+                  itemBuilder: (context, index) {
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+
+                      child: Image.network(
+                        report.imageUrls[index],
+                        width: 160,
+                        fit: BoxFit.cover,
+
+                        errorBuilder: (_, __, ___) {
+                          return const ImagePlaceholderBox(
+                            height: 160,
+                            width: 160,
+                          );
+                        },
+                      ),
+                    );
+                  },
+                ),
+              ),
+
+            if (report.imageUrls.isNotEmpty)
+              const SizedBox(height: 8),
+
+            // -------------------------------------------------------------
+            // DESCRIPTION
+            // -------------------------------------------------------------
+
+            if (report.description != null &&
+                report.description!.trim().isNotEmpty)
+              Text(
+                report.description!,
+                style: const TextStyle(
+                  fontSize: 13,
+                ),
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+              ),
+
+            // -------------------------------------------------------------
+            // LOCATION
+            // -------------------------------------------------------------
+
+            if (report.location != null &&
+                report.location!.trim().isNotEmpty) ...[
+              const SizedBox(height: 6),
+
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.location_on_outlined,
+                    size: 15,
+                    color: AppColors.textSecondary,
+                  ),
+
+                  const SizedBox(width: 4),
+
+                  Expanded(
+                    child: Text(
+                      report.location!,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: AppColors.textSecondary,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            const SizedBox(height: 8),
+
+            // -------------------------------------------------------------
+            // STATUS
+            // -------------------------------------------------------------
+
+            Text(
+              'Status: ${report.status}',
+              style: const TextStyle(
+                fontSize: 11,
+                color: AppColors.textSecondary,
+              ),
+            ),
+
+            const SizedBox(height: 4),
+
+            // -------------------------------------------------------------
+            // STATS
+            // -------------------------------------------------------------
+
+            Text(
+              '${report.likeCount} Likes   '
+              '${report.commentCount} Comments',
               style: const TextStyle(
                 fontSize: 11,
                 color: AppColors.textSecondary,

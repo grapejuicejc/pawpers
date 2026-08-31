@@ -22,31 +22,56 @@ Future<bool?> showLogoutConfirmation(BuildContext context) {
             color: AppColors.textSecondary,
           ),
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(24, 0, 24, 20),
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop(false);
-            },
-            child: const Text(
-              'Cancel',
-              style: TextStyle(
-                color: AppColors.textSecondary,
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () {
+                Navigator.of(context).pop(false);
+              },
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(46),
+                side: const BorderSide(
+                  color: AppColors.textSecondary,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  color: AppColors.textPrimary,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ),
 
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+          const SizedBox(height: 10),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(true);
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                minimumSize: const Size.fromHeight(46),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                'Log Out',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-            onPressed: () {
-              Navigator.of(context).pop(true);
-            },
-            child: const Text('Log Out'),
           ),
         ],
       );

@@ -32,7 +32,8 @@ class SupabaseService {
       return user;
     } catch (e, stackTrace) {
       log('Sign up failed', error: e, stackTrace: stackTrace);
-      return null;
+      //return null;
+      rethrow;
     }
   }
 
@@ -74,7 +75,7 @@ class SupabaseService {
     return response;
   }
 
-   Future<void> updateProfile({
+  Future<void> updateProfile({
     required String username,
     required String bio,
     String? profilePhotoUrl,
@@ -84,75 +85,74 @@ class SupabaseService {
     if (user == null) {
       log("No logged in user");
       return;
-    };
+    }
+    ;
 
     await _client
         .from('profiles')
         .update({
           'username': username,
           'bio': bio,
-          if(profilePhotoUrl != null) 'profilePhotoUrl': profilePhotoUrl,
+          if (profilePhotoUrl != null) 'profilePhotoUrl': profilePhotoUrl,
         })
         .eq('id', user.id);
   }
 
-    // Future<void> deleteAccount() async {
-    //   final user = _client.auth.currentUser;
+  // Future<void> deleteAccount() async {
+  //   final user = _client.auth.currentUser;
 
-    //   if (user == null) {
-    //     log("No logged in user");
-    //     return;
-    //   }
+  //   if (user == null) {
+  //     log("No logged in user");
+  //     return;
+  //   }
 
-    //   // Delete profile picture
-    //   await _client.storage
-    //       .from('profilepictures')
-    //       .remove([
-    //         '${user.id}/profile.jpg'
-    //       ]);
+  //   // Delete profile picture
+  //   await _client.storage
+  //       .from('profilepictures')
+  //       .remove([
+  //         '${user.id}/profile.jpg'
+  //       ]);
 
-    //   // Delete profile row
-    //   await _client
-    //       .from('profiles')
-    //       .delete()
-    //       .eq('id', user.id);
+  //   // Delete profile row
+  //   await _client
+  //       .from('profiles')
+  //       .delete()
+  //       .eq('id', user.id);
 
-    //   // Logout
-    //   await _client.auth.signOut();
-    // }
+  //   // Logout
+  //   await _client.auth.signOut();
+  // }
 
- Future<void> deleteAccount() async {
-  final response = await _client.functions.invoke('delete-account');
+  Future<void> deleteAccount() async {
+    final response = await _client.functions.invoke('delete-account');
 
-  if (response.status != 200) {
-    throw Exception(
-      response.data is Map
-          ? response.data['error']
-          : response.data.toString(),
-    );
+    if (response.status != 200) {
+      throw Exception(
+        response.data is Map
+            ? response.data['error']
+            : response.data.toString(),
+      );
+    }
   }
-}
 
-// Future<void> deleteProfile() async {
-//   final user = _client.auth.currentUser;
+  // Future<void> deleteProfile() async {
+  //   final user = _client.auth.currentUser;
 
-//   if (user == null) {
-//     throw Exception("No logged in user.");
-//   }
+  //   if (user == null) {
+  //     throw Exception("No logged in user.");
+  //   }
 
-//   // Delete profile picture
-//   await _client.storage
-//       .from('profilepictures')
-//       .remove([
-//         '${user.id}/profile.jpg'
-//       ]);
+  //   // Delete profile picture
+  //   await _client.storage
+  //       .from('profilepictures')
+  //       .remove([
+  //         '${user.id}/profile.jpg'
+  //       ]);
 
-//   // Delete profile row
-//   await _client
-//       .from('profiles')
-//       .delete()
-//       .eq('id', user.id);
-// }
-
-  
+  //   // Delete profile row
+  //   await _client
+  //       .from('profiles')
+  //       .delete()
+  //       .eq('id', user.id);
+  // }
 }

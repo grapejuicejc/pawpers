@@ -467,17 +467,47 @@ class _AddPetDialogState extends State<_AddPetDialog> {
   // ============================================================
 
   Future<void> _pickImage() async {
-    final picked = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-    );
+  final source = await showModalBottomSheet<ImageSource>(
+    context: context,
+    builder: (context) {
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Choose from Gallery'),
+              onTap: () {
+                Navigator.pop(context, ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Take a Photo'),
+              onTap: () {
+                Navigator.pop(context, ImageSource.camera);
+              },
+            ),
+          ],
+        ),
+      );
+    },
+  );
 
-    if (picked != null) {
-      setState(() {
-        _imageFile = File(picked.path);
-      });
+      if (source == null) return;
+
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        imageQuality: 80,
+      );
+
+      if (picked != null && mounted) {
+        setState(() {
+          _imageFile = File(picked.path);
+          _errorMessage = null;
+        });
+      }
     }
-  }
 
   // ============================================================
   // ADD PET
@@ -496,6 +526,12 @@ class _AddPetDialogState extends State<_AddPetDialog> {
       _showError('Please enter your pet\'s name.');
       return;
     }
+
+    if (_imageFile == null) {
+      _showError('Please select a photo of your pet.');
+      return;
+    }
+        
 
     if (_selectedBreed == null) {
       _showError('Please select a breed.');
@@ -854,18 +890,48 @@ class _EditPetDialogState extends State<_EditPetDialog> {
   // PICK IMAGE
   // ============================================================
 
-  Future<void> _pickImage() async {
-    final picked = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-    );
+    Future<void> _pickImage() async {
+      final source = await showModalBottomSheet<ImageSource>(
+        context: context,
+        builder: (context) {
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined),
+                  title: const Text('Choose from Gallery'),
+                  onTap: () {
+                    Navigator.pop(context, ImageSource.gallery);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.camera_alt_outlined),
+                  title: const Text('Take a Photo'),
+                  onTap: () {
+                    Navigator.pop(context, ImageSource.camera);
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      );
 
-    if (picked != null) {
-      setState(() {
-        _imageFile = File(picked.path);
-      });
+      if (source == null) return;
+
+      final picked = await ImagePicker().pickImage(
+        source: source,
+        imageQuality: 80,
+      );
+
+      if (picked != null && mounted) {
+        setState(() {
+          _imageFile = File(picked.path);
+          _errorMessage = null;
+        });
+      }
     }
-  }
 
   // ============================================================
   // SAVE PET
@@ -882,6 +948,12 @@ class _EditPetDialogState extends State<_EditPetDialog> {
 
     if (name.isEmpty) {
       _showError('Please enter your pet\'s name.');
+      return;
+    }
+
+    if (_imageFile == null &&
+        (widget.pet.photoUrl == null || widget.pet.photoUrl!.isEmpty)) {
+      _showError('Please select a photo of your pet.');
       return;
     }
 
@@ -996,15 +1068,37 @@ class _EditPetDialogState extends State<_EditPetDialog> {
             // ----------------------------------------------------
             // PHOTO
             // ----------------------------------------------------
-            Center(
-              child: GestureDetector(
-                onTap: _pickImage,
-                child: _EditPetImagePreview(
-                  imageFile: _imageFile,
-                  photoUrl: widget.pet.photoUrl,
+           Center(
+            child: Stack(
+              alignment: Alignment.bottomRight,
+              children: [
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: _EditPetImagePreview(
+                    imageFile: _imageFile,
+                    photoUrl: widget.pet.photoUrl,
+                  ),
                 ),
-              ),
+
+                // Edit icon
+                GestureDetector(
+                  onTap: _pickImage,
+                  child: Container(
+                    padding: const EdgeInsets.all(5),
+                    decoration: const BoxDecoration(
+                      color: AppColors.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.edit,
+                      size: 14,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
             ),
+          ),
 
             const SizedBox(height: 16),
 

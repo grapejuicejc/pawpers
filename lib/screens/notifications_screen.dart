@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../app_theme.dart';
+import '../screens/verification_request_details.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -40,8 +41,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text('Failed to load notifications: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load notifications: $e')),
+      );
     }
   }
 
@@ -62,81 +64,96 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Notifications')),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _notifications.isEmpty
+      body:
+          _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : _notifications.isEmpty
               ? const Center(child: Text('No notifications yet.'))
               : RefreshIndicator(
-                  onRefresh: _fetchNotifications,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(16),
-                    itemCount: _notifications.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final n = _notifications[index];
-                      final isRead = n['is_read'] == true;
+                onRefresh: _fetchNotifications,
+                child: ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: _notifications.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 8),
+                  itemBuilder: (context, index) {
+                    final n = _notifications[index];
+                    final isRead = n['is_read'] == true;
 
-                      return Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: isRead ? Colors.white : AppColors.background,
-                          border: Border.all(color: AppColors.divider),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: InkWell(
-                          onTap: () {
-                            if (!isRead) _markAsRead(n['id']);
-                          },
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Icon(
-                                n['type'] == 'vet_verification'
-                                    ? Icons.verified_outlined
-                                    : Icons.notifications_outlined,
-                                color: AppColors.primary,
-                                size: 20,
+                    return Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: isRead ? Colors.white : AppColors.background,
+                        border: Border.all(color: AppColors.divider),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: InkWell(
+                        onTap: () {
+                          if (!isRead) _markAsRead(n['id']);
+
+                          if (n['type'] == 'vet_verification' && n['reference_id'] != null) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => VetVerificationDetailScreen(
+                                  verificationId: n['reference_id'].toString(),
+                                ),
                               ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
+                            );
+                          }
+                        },
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              n['type'] == 'vet_verification'
+                                  ? Icons.verified_outlined
+                                  : Icons.notifications_outlined,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    n['title'] ?? '',
+                                    style: TextStyle(
+                                      fontWeight:
+                                          isRead
+                                              ? FontWeight.w600
+                                              : FontWeight.w800,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                  if (n['body'] != null) ...[
+                                    const SizedBox(height: 4),
                                     Text(
-                                      n['title'] ?? '',
-                                      style: TextStyle(
-                                        fontWeight:
-                                            isRead ? FontWeight.w600 : FontWeight.w800,
-                                        fontSize: 13,
+                                      n['body'],
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: AppColors.textSecondary,
                                       ),
                                     ),
-                                    if (n['body'] != null) ...[
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        n['body'],
-                                        style: const TextStyle(
-                                            fontSize: 12, color: AppColors.textSecondary),
-                                      ),
-                                    ],
                                   ],
+                                ],
+                              ),
+                            ),
+                            if (!isRead)
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.primary,
+                                  shape: BoxShape.circle,
                                 ),
                               ),
-                              if (!isRead)
-                                Container(
-                                  width: 8,
-                                  height: 8,
-                                  decoration: const BoxDecoration(
-                                    color: AppColors.primary,
-                                    shape: BoxShape.circle,
-                                  ),
-                                ),
-                            ],
-                          ),
+                          ],
                         ),
-                      );
-                    },
-                  ),
+                      ),
+                    );
+                  },
                 ),
+              ),
     );
   }
 }

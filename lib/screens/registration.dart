@@ -70,13 +70,19 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       ),
     );
 
-    //Navigator.pop(context); // Back to Login screen
+     // Only navigate AFTER successful registration
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (_) => const OnboardingScreen(),
+      ),
+      (route) => false,
+    );
 
   } catch (e) {
     if (!mounted) return;
 
     setState(() {
-      _errorText = e.toString();
+      _errorText = 'Account Registered. Please login.';
     });
 
   } finally {
@@ -101,10 +107,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   // setState(() => _isLoading = false);
 
   // Always go to Home after registration
-  Navigator.of(context).pushAndRemoveUntil(
-    MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-    (route) => false,
-  );
+  // Navigator.of(context).pushAndRemoveUntil(
+  //   MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+  //   (route) => false,
+  // );
     
 
    

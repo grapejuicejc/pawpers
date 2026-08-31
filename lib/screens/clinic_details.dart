@@ -16,10 +16,16 @@ class ClinicDetailsPage extends StatelessWidget {
   Future<void> _openDirections() async {
     final latitude = clinic.latitude;
     final longitude = clinic.longitude;
+    final address = clinic.address;
+
+    final query =
+      address.trim().isNotEmpty
+          ? address.trim()
+          : '$latitude,$longitude';
 
     // Google Maps URL
     final googleMapsUrl = Uri.parse(
-      "https://www.google.com/maps/search/?api=1&query=$latitude,$longitude",
+      "https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}",
     );
 
     if (await canLaunchUrl(googleMapsUrl)) {
@@ -30,56 +36,53 @@ class ClinicDetailsPage extends StatelessWidget {
   Future<void> _callClinic() async {
     final phone = details["formatted_phone_number"];
 
-   if (phone == null || phone.toString().isEmpty) {
-    return;
-  }
-
-  final phoneUrl = Uri(
-    scheme: 'tel',
-    path: phone.toString(),
-  );
-
-      try {
-    final launched = await launchUrl(phoneUrl);
-
-    if (!launched) {
-      debugPrint("Could not launch phone: $phoneUrl");
+    if (phone == null || phone.toString().isEmpty) {
+      return;
     }
-  } catch (e) {
-    debugPrint("Error launching phone: $e");
+
+    final phoneUrl = Uri(scheme: 'tel', path: phone.toString());
+
+    try {
+      final launched = await launchUrl(phoneUrl);
+
+      if (!launched) {
+        debugPrint("Could not launch phone: $phoneUrl");
+      }
+    } catch (e) {
+      debugPrint("Error launching phone: $e");
+    }
   }
-  }
-//============================================================
+  //============================================================
 
   Future<void> _openWebsite() async {
-  final website = details["website"];
+    final website = details["website"];
 
-  if (website == null || website.toString().trim().isEmpty) {
-    return;
-  }
-
-  String websiteString = website.toString().trim();
-
-  if (!websiteString.startsWith('http://') &&
-      !websiteString.startsWith('https://')) {
-    websiteString = 'https://$websiteString';
-  }
-
-  final websiteUrl = Uri.parse(websiteString);
-
-  try {
-    final launched = await launchUrl(
-      websiteUrl,
-      mode: LaunchMode.externalApplication,
-    );
-
-    if (!launched) {
-      debugPrint("Could not launch website: $websiteUrl");
+    if (website == null || website.toString().trim().isEmpty) {
+      return;
     }
-  } catch (e) {
-    debugPrint("Error launching website: $e");
+
+    String websiteString = website.toString().trim();
+
+    if (!websiteString.startsWith('http://') &&
+        !websiteString.startsWith('https://')) {
+      websiteString = 'https://$websiteString';
+    }
+
+    final websiteUrl = Uri.parse(websiteString);
+
+    try {
+      final launched = await launchUrl(
+        websiteUrl,
+        mode: LaunchMode.externalApplication,
+      );
+
+      if (!launched) {
+        debugPrint("Could not launch website: $websiteUrl");
+      }
+    } catch (e) {
+      debugPrint("Error launching website: $e");
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -150,7 +153,12 @@ class ClinicDetailsPage extends StatelessWidget {
             const SizedBox(height: 20),
 
             // INFORMATION
-            _infoCard(Icons.location_on, "Address", clinic.address, _openDirections),
+            _infoCard(
+              Icons.location_on,
+              "Address",
+              clinic.address,
+              _openDirections,
+            ),
 
             _infoCard(
               Icons.phone,
@@ -230,7 +238,6 @@ class ClinicDetailsPage extends StatelessWidget {
               const Text("No reviews available"),
 
             const SizedBox(height: 25),
-
           ],
         ),
       ),
@@ -248,9 +255,7 @@ class ClinicDetailsPage extends StatelessWidget {
 
       color: const Color(0xFFFFF3B0),
       elevation: 3,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
 
       child: InkWell(
         borderRadius: BorderRadius.circular(12),

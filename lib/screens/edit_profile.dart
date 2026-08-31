@@ -81,6 +81,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     });
   }
 
+  Future<void> _takePhoto() async {
+    try {
+      final picker = ImagePicker();
+
+      final image = await picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 80,
+      );
+
+      if (image == null) return;
+
+      setState(() {
+        _selectedImage = File(image.path);
+      });
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to take photo: $e'),
+        ),
+      );
+    }
+  }
+
   Future<String?> _uploadProfileImage() async {
     if (_selectedImage == null) return null;
 
@@ -233,16 +258,19 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               borderRadius: 45,
                             ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.camera_alt,
-                      size: 16,
-                      color: Colors.white,
+                 GestureDetector(
+                    onTap: _takePhoto,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(
+                        color: AppColors.primary,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.camera_alt,
+                        size: 16,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ],
@@ -250,7 +278,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               const SizedBox(height: 8),
               TextButton(
                 onPressed: _pickImage,
-                child: const Text('Change Photo'),
+                child: const Text('Select from gallery'),
               ),
               const SizedBox(height: 12),
               _fieldLabel('NAME'),
@@ -279,6 +307,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 obscureText: true,
                 decoration: const InputDecoration(
                   hintText: 'Leave blank to keep current password',
+                  hintStyle: TextStyle(fontSize: 12),
                 ),
               ),
               const SizedBox(height: 24),

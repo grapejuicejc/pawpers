@@ -16,7 +16,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'stray_report_comments.dart';
 import 'stray_report_details.dart';
 
-
 /// Root shell shown right after login. Holds the bottom nav and swaps
 /// between the 4 real tabs (the 5th "slot" is the "+" button, which opens
 /// the upload action sheet instead of navigating).
@@ -158,18 +157,12 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
           )
         ''');
 
-        final data =
-            _selectedFilter == 'All'
-                ? await query.order(
-                    'created_at',
-                    ascending: false,
-                  )
-                : await query
-                    .contains('category', [_selectedFilter])
-                    .order(
-                      'created_at',
-                      ascending: false,
-                    );
+      final data =
+          _selectedFilter == 'All'
+              ? await query.order('created_at', ascending: false)
+              : await query
+                  .contains('category', [_selectedFilter])
+                  .order('created_at', ascending: false);
 
       print('Fetched posts: $data');
 
@@ -210,19 +203,20 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
                   profile != null
                       ? profile['profilePhotoUrl']?.toString()
                       : null,
-              isVerified: profile != null
-                ? (profile['is_verified'] as bool? ?? false)
-                : false,
+              isVerified:
+                  profile != null
+                      ? (profile['is_verified'] as bool? ?? false)
+                      : false,
               caption: row['caption']?.toString(),
               imageUrl: imageUrls,
               isLiked: isLiked,
               likeCount: reactions.length,
-              
+
               categories:
-                (row['category'] as List?)
-                    ?.map((e) => e.toString())
-                    .toList() ??
-                [],
+                  (row['category'] as List?)
+                      ?.map((e) => e.toString())
+                      .toList() ??
+                  [],
               commentCount: comments.length,
               createdAt: DateTime.parse(row['created_at'].toString()),
             );
@@ -259,16 +253,16 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
   }
 
   Future<void> _fetchStrayReports() async {
-  setState(() {
-    _isStrayLoading = true;
-  });
+    setState(() {
+      _isStrayLoading = true;
+    });
 
-  try {
-    final supabase = Supabase.instance.client;
+    try {
+      final supabase = Supabase.instance.client;
 
-    final data = await supabase
-        .from('StrayReports')
-        .select('''
+      final data = await supabase
+          .from('StrayReports')
+          .select('''
           strayID,
           userID,
           description,
@@ -301,63 +295,59 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
             created_at
           )
         ''')
-        .order('created_at', ascending: false);
+          .order('created_at', ascending: false);
 
-    print('Fetched stray reports: $data');
+      print('Fetched stray reports: $data');
 
-    final currentUser = supabase.auth.currentUser;
+      final currentUser = supabase.auth.currentUser;
 
-    final reports = data.map<StrayReport>((row) {
-      final reactions =
-          row['StrayReportReactions'] as List? ?? [];
+      final reports =
+          data.map<StrayReport>((row) {
+            final reactions = row['StrayReportReactions'] as List? ?? [];
 
-      final comments =
-          row['StrayReportComments'] as List? ?? [];
+            final comments = row['StrayReportComments'] as List? ?? [];
 
-      final isLiked =
-          currentUser != null &&
-          reactions.any(
-            (reaction) =>
-                reaction['userID'] == currentUser.id,
-          );
+            final isLiked =
+                currentUser != null &&
+                reactions.any(
+                  (reaction) => reaction['userID'] == currentUser.id,
+                );
 
-      return StrayReport.fromJson(
-        row,
-        isLiked: isLiked,
-        likeCount: reactions.length,
-        commentCount: comments.length,
+            return StrayReport.fromJson(
+              row,
+              isLiked: isLiked,
+              likeCount: reactions.length,
+              commentCount: comments.length,
+            );
+          }).toList();
+
+      print('Converted stray reports: $reports');
+
+      if (!mounted) return;
+
+      setState(() {
+        _strayReports = reports;
+        _isStrayLoading = false;
+      });
+    } catch (e, stackTrace) {
+      print('Error fetching stray reports: $e');
+      print(stackTrace);
+
+      if (!mounted) return;
+
+      setState(() {
+        _isStrayLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to load stray reports: $e')),
       );
-    }).toList();
-
-    print('Converted stray reports: $reports');
-
-    if (!mounted) return;
-
-    setState(() {
-      _strayReports = reports;
-      _isStrayLoading = false;
-    });
-  } catch (e, stackTrace) {
-    print('Error fetching stray reports: $e');
-    print(stackTrace);
-
-    if (!mounted) return;
-
-    setState(() {
-      _isStrayLoading = false;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Failed to load stray reports: $e',
-        ),
-      ),
-    );
+    }
   }
-}
+
   @override
   Widget build(BuildContext context) {
+    final user = Supabase.instance.client.auth.currentUser;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -379,7 +369,9 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
                       _fetchPosts();
                     },
                   ),
+
                   const SizedBox(width: 20),
+
                   _FeedTabButton(
                     label: 'Strays',
                     selected: _isStrayFeed,
@@ -387,49 +379,66 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
                       setState(() {
                         _isStrayFeed = true;
                       });
+
                       await _fetchStrayReports();
                     },
                   ),
                 ],
               ),
 
-              StreamBuilder<List<Map<String, dynamic>>>(
-                stream: Supabase.instance.client
-                    .from('notifications')
-                    .stream(primaryKey: ['id'])
-                    .eq('user_id', Supabase.instance.client.auth.currentUser!.id),
-                builder: (context, snapshot) {
-                  final unreadCount =
-                      (snapshot.data ?? []).where((n) => n['is_read'] == false).length;
+              if (user != null)
+                StreamBuilder<List<Map<String, dynamic>>>(
+                  stream: Supabase.instance.client
+                      .from('notifications')
+                      .stream(primaryKey: ['id'])
+                      .eq('user_id', user.id),
+                  builder: (context, snapshot) {
+                    final unreadCount =
+                        (snapshot.data ?? [])
+                            .where((n) => n['is_read'] == false)
+                            .length;
 
-                  return Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.notifications_outlined),
-                        onPressed: () => Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.notifications_outlined),
+                          onPressed:
+                              () => Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const NotificationsScreen(),
+                                ),
+                              ),
                         ),
-                      ),
-                      if (unreadCount > 0)
-                        Positioned(
-                          right: 4,
-                          top: 4,
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
-                            child: Text(
-                              '$unreadCount',
-                              style: const TextStyle(color: Colors.white, fontSize: 9),
-                              textAlign: TextAlign.center,
+
+                        if (unreadCount > 0)
+                          Positioned(
+                            right: 4,
+                            top: 4,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: Colors.red,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Text(
+                                '$unreadCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 9,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
                             ),
                           ),
-                        ),
-                    ],
-                  );
-                },
-              )
+                      ],
+                    );
+                  },
+                ),
             ],
           ),
         ),
@@ -629,7 +638,6 @@ class _StrayReportCard extends StatefulWidget {
 }
 
 class _StrayReportCardState extends State<_StrayReportCard> {
-
   late bool _isLiked;
   late int _likeCount;
   late int _commentCount;
@@ -683,13 +691,12 @@ class _StrayReportCardState extends State<_StrayReportCard> {
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to update like: $e'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to update like: $e')));
     }
   }
+
   @override
   Widget build(BuildContext context) {
     final report = widget.report;
@@ -699,16 +706,14 @@ class _StrayReportCardState extends State<_StrayReportCard> {
       onTap: () {
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => StrayReportDetailScreen(
-              report: widget.report,
-            ),
+            builder: (_) => StrayReportDetailScreen(report: widget.report),
           ),
         );
       },
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-      // USER + STATUS
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // USER + STATUS
           Row(
             children: [
               CircleAvatar(
@@ -723,10 +728,10 @@ class _StrayReportCardState extends State<_StrayReportCard> {
                     report.profilePhotoUrl == null ||
                             report.profilePhotoUrl!.isEmpty
                         ? const Icon(
-                            Icons.person,
-                            size: 16,
-                            color: AppColors.textSecondary,
-                          )
+                          Icons.person,
+                          size: 16,
+                          color: AppColors.textSecondary,
+                        )
                         : null,
               ),
 
@@ -747,7 +752,11 @@ class _StrayReportCardState extends State<_StrayReportCard> {
                     ),
                     if (report.isVerified) ...[
                       const SizedBox(width: 4),
-                      const Icon(Icons.verified, size: 14, color: AppColors.primary),
+                      const Icon(
+                        Icons.verified,
+                        size: 14,
+                        color: AppColors.primary,
+                      ),
                     ],
                   ],
                 ),
@@ -772,201 +781,200 @@ class _StrayReportCardState extends State<_StrayReportCard> {
             ],
           ),
 
-        const SizedBox(height: 10),
+          const SizedBox(height: 10),
 
-        // IMAGES
-        if (report.imageUrls.isNotEmpty)
-          SizedBox(
-            height: 250,
-            child: PageView.builder(
-              itemCount: report.imageUrls.length,
-              itemBuilder: (context, index) {
-                return ClipRRect(
-                  borderRadius: BorderRadius.circular(10),
-                  child: Image.network(
-                    report.imageUrls[index],
-                    width: double.infinity,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const ImagePlaceholderBox(height: 250);
-                    },
-                  ),
-                );
-              },
-            ),
-          )
-        else
-          const ImagePlaceholderBox(height: 140),
-
-        const SizedBox(height: 10),
-
-        // LOCATION
-        if (widget.report.location != null &&
-            widget.report.location!.trim().isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.only(top: 10),
-            child: InkWell(
-              onTap: () => _openLocationInGoogleMaps(),
-              borderRadius: BorderRadius.circular(8),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.location_on_outlined,
-                      size: 18,
-                      color: AppColors.primary,
+          // IMAGES
+          if (report.imageUrls.isNotEmpty)
+            SizedBox(
+              height: 250,
+              child: PageView.builder(
+                itemCount: report.imageUrls.length,
+                itemBuilder: (context, index) {
+                  return ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.network(
+                      report.imageUrls[index],
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (context, error, stackTrace) {
+                        return const ImagePlaceholderBox(height: 250);
+                      },
                     ),
-                    const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        widget.report.location!,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.primary,
-                          decoration: TextDecoration.underline,
+                  );
+                },
+              ),
+            )
+          else
+            const ImagePlaceholderBox(height: 140),
+
+          const SizedBox(height: 10),
+
+          // LOCATION
+          if (widget.report.location != null &&
+              widget.report.location!.trim().isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: InkWell(
+                onTap: () => _openLocationInGoogleMaps(),
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.location_on_outlined,
+                        size: 18,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          widget.report.location!,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary,
+                            decoration: TextDecoration.underline,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
 
-        // if (widget.report.latitude != null && widget.report.longitude != null)
-        //   Padding(
-        //     padding: const EdgeInsets.only(left: 24, top: 2),
-        //     child: Text(
-        //       '${widget.report.latitude!.toStringAsFixed(5)}, '
-        //       '${widget.report.longitude!.toStringAsFixed(5)}',
-        //       style: const TextStyle(
-        //         fontSize: 11,
-        //         color: AppColors.textSecondary,
-        //       ),
-        //     ),
-        //   ),
+          // if (widget.report.latitude != null && widget.report.longitude != null)
+          //   Padding(
+          //     padding: const EdgeInsets.only(left: 24, top: 2),
+          //     child: Text(
+          //       '${widget.report.latitude!.toStringAsFixed(5)}, '
+          //       '${widget.report.longitude!.toStringAsFixed(5)}',
+          //       style: const TextStyle(
+          //         fontSize: 11,
+          //         color: AppColors.textSecondary,
+          //       ),
+          //     ),
+          //   ),
 
-        // DESCRIPTION
-        if (report.description != null &&
-            report.description!.trim().isNotEmpty) ...[
+          // DESCRIPTION
+          if (report.description != null &&
+              report.description!.trim().isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(report.description!, style: const TextStyle(fontSize: 13)),
+          ],
+
           const SizedBox(height: 8),
-          Text(report.description!, style: const TextStyle(fontSize: 13)),
-        ],
 
-       const SizedBox(height: 8),
-
-        // LIKES / COMMENTS
-        Transform.translate(
-          offset: const Offset(-10, 0),
-          child: Row(
-            children: [
-              // LIKE BUTTON
-              IconButton(
-                onPressed: _toggleLike,
-                icon: Icon(
-                  _isLiked
-                      ? Icons.favorite
-                      : Icons.favorite_border,
-                  color: _isLiked
-                      ? Colors.red
-                      : AppColors.textSecondary,
+          // LIKES / COMMENTS
+          Transform.translate(
+            offset: const Offset(-10, 0),
+            child: Row(
+              children: [
+                // LIKE BUTTON
+                IconButton(
+                  onPressed: _toggleLike,
+                  icon: Icon(
+                    _isLiked ? Icons.favorite : Icons.favorite_border,
+                    color: _isLiked ? Colors.red : AppColors.textSecondary,
+                  ),
                 ),
-              ),
 
-              // LIKE COUNT
-              GestureDetector(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => StrayReportDetailScreen(
-                        report: widget.report,
+                // LIKE COUNT
+                GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder:
+                            (_) =>
+                                StrayReportDetailScreen(report: widget.report),
                       ),
+                    );
+                  },
+                  child: Text(
+                    '$_likeCount Likes',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
                     ),
-                  );
-                },
-                child: Text(
-                  '$_likeCount Likes',
-                  style: const TextStyle(
-                    fontSize: 12,
+                  ),
+                ),
+
+                const SizedBox(width: 16),
+
+                // COMMENT BUTTON
+                IconButton(
+                  onPressed: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder:
+                            (_) => StrayReportCommentsScreen(
+                              strayId: widget.report.id,
+                            ),
+                      ),
+                    );
+                  },
+                  icon: const Icon(
+                    Icons.comment_outlined,
                     color: AppColors.textSecondary,
                   ),
                 ),
-              ),
 
-              const SizedBox(width: 16),
-
-              // COMMENT BUTTON
-              IconButton(
-                onPressed: () async {
-                  await Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => StrayReportCommentsScreen(
-                        strayId: widget.report.id,
+                // COMMENT COUNT
+                GestureDetector(
+                  onTap: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder:
+                            (_) =>
+                                StrayReportDetailScreen(report: widget.report),
                       ),
+                    );
+                  },
+                  child: Text(
+                    '$_commentCount Comments',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary,
                     ),
-                  );
-                },
-                icon: const Icon(
-                  Icons.comment_outlined,
-                  color: AppColors.textSecondary,
-                ),
-              ),
-
-              // COMMENT COUNT
-              GestureDetector(
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => StrayReportDetailScreen(
-                        report: widget.report,
-                      ),
-                    ),
-                  );
-                },
-                child: Text(
-                  '$_commentCount Comments',
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.textSecondary,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-        ),
-    
-      ],
-    ),
+        ],
+      ),
     );
   }
 
- Future<void> _openLocationInGoogleMaps() async {
-  final latitude = widget.report.latitude;
-  final longitude = widget.report.longitude;
+  Future<void> _openLocationInGoogleMaps() async {
+    final latitude = widget.report.latitude;
+    final longitude = widget.report.longitude;
+    final location = widget.report.location;
 
-  if (latitude == null || longitude == null) {
-    return;
-  }
+    
 
-  final uri = Uri.parse(
-    'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude',
-  );
+    if (latitude == null || longitude == null) {
+      return;
+    }
+
+     final query =
+      (location != null && location.trim().isNotEmpty)
+          ? location.trim()
+          : '$latitude,$longitude';
+
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}',
+    );
 
     if (await canLaunchUrl(uri)) {
-      await launchUrl(
-        uri,
-        mode: LaunchMode.externalApplication,
-      );
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Could not open Google Maps.'),
-        ),
+        const SnackBar(content: Text('Could not open Google Maps.')),
       );
     }
   }
@@ -1082,83 +1090,85 @@ class _PostCardState extends State<_PostCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-      
-       // USER + KEYWORDS
-          if (widget.post.authorName.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  // PROFILE PHOTO
-                  CircleAvatar(
-                    radius: 14,
-                    backgroundColor: AppColors.placeholder,
-                    backgroundImage:
-                        widget.post.authorAvatarUrl != null &&
-                                widget.post.authorAvatarUrl!.isNotEmpty
-                            ? NetworkImage(widget.post.authorAvatarUrl!)
-                            : null,
-                    child:
-                        widget.post.authorAvatarUrl == null ||
-                                widget.post.authorAvatarUrl!.isEmpty
-                            ? const Icon(
-                                Icons.person,
-                                size: 16,
-                                color: AppColors.textSecondary,
-                              )
-                            : null,
-                  ),
-
-                  const SizedBox(width: 8),
-
-                  // USERNAME
-                  Text(
-                    widget.post.authorName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: 13,
-                    ),
-                  ),
-
-                  if (widget.post.isVerified) ...[
-                    const SizedBox(width: 4),
-                    const Icon(
-                      Icons.verified,
-                      size: 14,
-                      color: AppColors.primary, // or Colors.blue, whatever fits your palette
-                    ),
-                  ],
-
-                  const Spacer(),
-
-                  // KEYWORDS
-                 
-                  if (widget.post.categories.isNotEmpty)
-                    Flexible(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.chipGrey,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          widget.post.categories.join(' / '),
-                          textAlign: TextAlign.right,
-                          style: const TextStyle(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w600,
+        // USER + KEYWORDS
+        if (widget.post.authorName.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                // PROFILE PHOTO
+                CircleAvatar(
+                  radius: 14,
+                  backgroundColor: AppColors.placeholder,
+                  backgroundImage:
+                      widget.post.authorAvatarUrl != null &&
+                              widget.post.authorAvatarUrl!.isNotEmpty
+                          ? NetworkImage(widget.post.authorAvatarUrl!)
+                          : null,
+                  child:
+                      widget.post.authorAvatarUrl == null ||
+                              widget.post.authorAvatarUrl!.isEmpty
+                          ? const Icon(
+                            Icons.person,
+                            size: 16,
                             color: AppColors.textSecondary,
-                          ),
-                        ),
+                          )
+                          : null,
+                ),
+
+                const SizedBox(width: 8),
+
+                // USERNAME
+                Text(
+                  widget.post.authorName,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
+
+                if (widget.post.isVerified) ...[
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.verified,
+                    size: 14,
+                    color:
+                        AppColors
+                            .primary, // or Colors.blue, whatever fits your palette
+                  ),
+                ],
+
+                const Spacer(),
+
+                // KEYWORDS
+                const Spacer(),
+
+                if (widget.post.categories.isNotEmpty)
+                  Container(
+                    constraints: const BoxConstraints(maxWidth: 160),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.chipGrey,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      widget.post.categories.join(' / '),
+                      textAlign: TextAlign.right,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textSecondary,
                       ),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
+          ),
         // IMAGES
         if (widget.post.imageUrl.isNotEmpty)
           SizedBox(
@@ -1180,7 +1190,6 @@ class _PostCardState extends State<_PostCard> {
               },
             ),
           ),
-
 
         const SizedBox(height: 6),
 

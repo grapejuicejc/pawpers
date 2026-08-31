@@ -741,72 +741,77 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         // IMAGES
         // ---------------------------------------------------------------------
 
-        if (post.imageUrl.isNotEmpty)
+     if (post.imageUrl.isNotEmpty)
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: SizedBox(
+            height: 360,
+            child: PageView.builder(
+              itemCount: post.imageUrl.length,
+              itemBuilder: (context, index) {
+                return Image.network(
+                  post.imageUrl[index],
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (
+                    context,
+                    child,
+                    loadingProgress,
+                  ) {
+                    if (loadingProgress == null) {
+                      return child;
+                    }
 
-          ClipRRect(
-            borderRadius:
-                BorderRadius.circular(12),
-
-            child: SizedBox(
-              height: 360,
-
-              child: PageView.builder(
-                itemCount:
-                    post.imageUrl.length,
-
-                itemBuilder:
-                    (context, index) {
-
-                  return Image.network(
-                    post.imageUrl[index],
-
-                    width:
-                        double.infinity,
-
-                    fit: BoxFit.cover,
-
-                    loadingBuilder:
-                        (
-                          context,
-                          child,
-                          loadingProgress,
-                        ) {
-                      if (loadingProgress ==
-                          null) {
-                        return child;
-                      }
-
-                      return const Center(
-                        child:
-                            CircularProgressIndicator(),
-                      );
-                    },
-
-                    errorBuilder:
-                        (
-                          context,
-                          error,
-                          stackTrace,
-                        ) {
-                      return const ImagePlaceholderBox(
-                        height: 360,
-                      );
-                    },
-                  );
-                },
-              ),
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  },
+                  errorBuilder: (
+                    context,
+                    error,
+                    stackTrace,
+                  ) {
+                    return const ImagePlaceholderBox(
+                      height: 360,
+                    );
+                  },
+                );
+              },
             ),
-          )
-
-        else
-
-          const ImagePlaceholderBox(
-            height: 250,
           ),
+        ),
 
-        const SizedBox(height: 12),
-
+      const SizedBox(height: 12),
+     
         // ---------------------------------------------------------------------
+        // CAPTION
+        // ---------------------------------------------------------------------
+
+        if (post.caption != null &&
+            post.caption!.trim().isNotEmpty) ...[
+
+          const SizedBox(height: 4),
+
+          RichText(
+            text: TextSpan(
+              style: const TextStyle(
+                fontSize: 14,
+                color: AppColors.textPrimary,
+              ),
+
+              children: [
+
+                TextSpan(
+                  text: post.caption!,
+                ),
+              ],
+            ),
+          ),
+        ],
+        const SizedBox(height: 12),
+     
+
+           // ---------------------------------------------------------------------
         // LIKE + COMMENT
         // ---------------------------------------------------------------------
 
@@ -862,44 +867,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           ],
         ),
 
-        // ---------------------------------------------------------------------
-        // CAPTION
-        // ---------------------------------------------------------------------
-
-        if (post.caption != null &&
-            post.caption!.trim().isNotEmpty) ...[
-
-          const SizedBox(height: 4),
-
-          RichText(
-            text: TextSpan(
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppColors.textPrimary,
-              ),
-
-              children: [
-
-                TextSpan(
-                  text: '${post.authorName} ',
-
-                  style: const TextStyle(
-                    fontWeight:
-                        FontWeight.w700,
-                  ),
-                ),
-
-                TextSpan(
-                  text: post.caption!,
-                ),
-              ],
-            ),
-          ),
-        ],
       ],
     );
   }
 }
+
 
 // =============================================================================
 // POST TIME FORMATTER

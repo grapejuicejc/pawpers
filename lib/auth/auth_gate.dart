@@ -26,6 +26,10 @@ class AuthGate extends StatelessWidget {
 
       //builfd appropriate page based on auth state
       builder: (context, snapshot) {
+         print(
+          'AUTH EVENT: ${snapshot.data?.event}, '
+          'session: ${snapshot.data?.session?.user.id}',
+        );
         //loading..
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -46,7 +50,10 @@ class AuthGate extends StatelessWidget {
         if (session == null) {
           return const LoginScreen();
         } else {
-          return _RoleRouter(userId: session.user.id);
+          return _RoleRouter(
+            key: ValueKey(session.user.id),
+            userId: session.user.id,
+          );
         }
       },
     );
@@ -56,7 +63,9 @@ class AuthGate extends StatelessWidget {
 // Looks up the profile's role once per session change, then routes.
 class _RoleRouter extends StatefulWidget {
   final String userId;
-  const _RoleRouter({required this.userId});
+  const _RoleRouter({required this.userId, super.key});
+
+
 
   @override
   State<_RoleRouter> createState() => _RoleRouterState();
@@ -65,15 +74,26 @@ class _RoleRouter extends StatefulWidget {
 class _RoleRouterState extends State<_RoleRouter> {
   late final Future<Map<String, dynamic>?> _profileFuture;
 
-  @override
+   @override
   void initState() {
     super.initState();
-    _profileFuture =
-        Supabase.instance.client
-            .from('profiles')
-            .select('role')
-            .eq('id', widget.userId)
-            .maybeSingle();
+    _profileFuture = _fetchProfileWithRetry();
+  }
+
+  Future<Map<String, dynamic>?> _fetchProfileWithRetry() async {
+    for (var attempt = 0; attempt < 3; attempt++) {
+      final profile = await Supabase.instance.client
+          .from('profiles')
+          .select('role')
+          .eq('id', widget.userId)
+          .maybeSingle();
+
+      if (profile != null) return profile;
+
+      // Profile not written yet (e.g. right after sign-up) — wait and retry.
+      await Future.delayed(const Duration(milliseconds: 400));
+    }
+    return null; // genuinely missing after retries
   }
 
   @override
@@ -104,4 +124,5 @@ class _RoleRouterState extends State<_RoleRouter> {
       },
     );
   }
+  
 }

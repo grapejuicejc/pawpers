@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../app_theme.dart';
+import 'report_stray.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:geocoding/geocoding.dart';
 
 class VetVerificationScreen extends StatefulWidget {
   const VetVerificationScreen({super.key});
@@ -15,7 +18,10 @@ class _VetVerificationScreenState extends State<VetVerificationScreen> {
   final PageController _pageController = PageController();
 
   final _clinicNameController = TextEditingController();
-  final _clinicAddressController = TextEditingController();
+  //final _clinicAddressController = TextEditingController();
+  String? _clinicAddress;
+  double? _clinicLatitude;
+  double? _clinicLongitude;
   final _contactController = TextEditingController();
 
   List<PlatformFile> _pickedFiles = [];
@@ -37,7 +43,9 @@ class _VetVerificationScreenState extends State<VetVerificationScreen> {
 
     if (validFiles.length != result.files.length && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Some files were skipped — max size is 5MB.')),
+        const SnackBar(
+          content: Text('Some files were skipped — max size is 5MB.'),
+        ),
       );
     }
 
@@ -80,7 +88,9 @@ class _VetVerificationScreenState extends State<VetVerificationScreen> {
       final storagePath =
           '$userId/${DateTime.now().millisecondsSinceEpoch}_${file.name}';
 
-      await supabase.storage.from('vet-documents').upload(
+      await supabase.storage
+          .from('vet-documents')
+          .upload(
             storagePath,
             File(path),
             fileOptions: const FileOptions(upsert: false),
@@ -91,24 +101,74 @@ class _VetVerificationScreenState extends State<VetVerificationScreen> {
 
     return paths;
   }
+  Future<void> _selectClinicLocation() async {
+    final result = await Navigator.of(context).push<LocationPickerResult>(
+      MaterialPageRoute(
+        builder: (_) => LocationPickerScreen(
+          initialLocation: _clinicLatitude != null && _clinicLongitude != null
+              ? LatLng(_clinicLatitude!, _clinicLongitude!)
+              : const LatLng(3.1390, 101.6869),
+        ),
+      ),
+    );
+
+    if (result == null) return;
+
+    setState(() {
+      _clinicLatitude = result.location.latitude;
+      _clinicLongitude = result.location.longitude;
+      _clinicAddress = result.name; // may be null if manually pinned
+    });
+
+    // If no name came back (manual map tap/drag), reverse-geocode as fallback.
+    if (_clinicAddress == null || _clinicAddress!.trim().isEmpty) {
+      try {
+        final placemarks = await placemarkFromCoordinates(
+          result.location.latitude,
+          result.location.longitude,
+        );
+
+        if (placemarks.isNotEmpty) {
+          final place = placemarks.first;
+          final parts = <String>[
+            if (place.name != null && place.name!.isNotEmpty) place.name!,
+            if (place.street != null && place.street!.isNotEmpty) place.street!,
+            if (place.locality != null && place.locality!.isNotEmpty) place.locality!,
+            if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty)
+              place.administrativeArea!,
+          ];
+
+          setState(() {
+            _clinicAddress = parts.join(', ');
+          });
+        }
+      } catch (e) {
+        print('Error reverse geocoding clinic location: $e');
+      }
+    }
+  }
 
   Future<void> _submitRequest() async {
-      if (_pickedFiles.isEmpty) {
+    if (_pickedFiles.isEmpty) {
       setState(() => _errorText = 'Please upload at least one document.');
       return;
-      }
-      if (_clinicNameController.text.trim().isEmpty) {
-        setState(() => _errorText = 'Please enter your clinic name.');
-        return;
-      }
-      if (_contactController.text.trim().isEmpty) {
-        setState(() => _errorText = 'Please enter a contact number.');
-        return;
-      }
-      if (!_acceptedTerms) {
-        setState(() => _errorText = 'Please accept the Terms & Conditions.');
-        return;
-      }
+    }
+    if (_clinicNameController.text.trim().isEmpty) {
+      setState(() => _errorText = 'Please enter your clinic name.');
+      return;
+    }
+    if (_clinicAddress == null || _clinicAddress!.trim().isEmpty) {
+      setState(() => _errorText = 'Please select your clinic location.');
+      return;
+    }
+    if (_contactController.text.trim().isEmpty) {
+      setState(() => _errorText = 'Please enter a contact number.');
+      return;
+    }
+    if (!_acceptedTerms) {
+      setState(() => _errorText = 'Please accept the Terms & Conditions.');
+      return;
+    }
     setState(() {
       _isSubmitting = true;
       _errorText = null;
@@ -124,7 +184,9 @@ class _VetVerificationScreenState extends State<VetVerificationScreen> {
       await supabase.from('vet_verifications').insert({
         'user_id': user.id,
         'clinic_name': _clinicNameController.text.trim(),
-        'clinic_address': _clinicAddressController.text.trim(),
+        'clinic_address': _clinicAddress,
+        'clinic_latitude': _clinicLatitude,
+        'clinic_longitude': _clinicLongitude,
         'contact_no': _contactController.text.trim(),
         'document_urls': documentPaths,
         'status': 'pending',
@@ -176,19 +238,29 @@ class _VetVerificationScreenState extends State<VetVerificationScreen> {
                       const SizedBox(height: 10),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 20, vertical: 10),
+                          horizontal: 20,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: AppColors.primary,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Text('Upload Files',
-                            style: TextStyle(
-                                color: Colors.white, fontWeight: FontWeight.w700)),
+                        child: const Text(
+                          'Upload Files',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 8),
-                      const Text('PDF, JPG, or PNG (Max 5MB)',
-                          style: TextStyle(
-                              fontSize: 11, color: AppColors.textSecondary)),
+                      const Text(
+                        'PDF, JPG, or PNG (Max 5MB)',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -212,12 +284,41 @@ class _VetVerificationScreenState extends State<VetVerificationScreen> {
               _sectionLabel('Clinic Name'),
               TextField(
                 controller: _clinicNameController,
-                decoration:
-                    const InputDecoration(hintText: 'e.g PetWise Animal Clinic'),
+                decoration: const InputDecoration(
+                  hintText: 'e.g PetWise Animal Clinic',
+                ),
               ),
               const SizedBox(height: 14),
               _sectionLabel('Clinic Address'),
-              TextField(controller: _clinicAddressController),
+                OutlinedButton.icon(
+                  onPressed: _isSubmitting ? null : _selectClinicLocation,
+                  icon: const Icon(Icons.map_outlined),
+                  label: Text(
+                    _clinicAddress == null ? 'Select Clinic Location' : 'Change Location',
+                  ),
+                ),
+
+                if (_clinicAddress != null && _clinicAddress!.trim().isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.location_on_outlined, size: 18, color: AppColors.primary),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            _clinicAddress!,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
               const SizedBox(height: 14),
               _sectionLabel('Contact No.'),
               TextField(
@@ -236,25 +337,35 @@ class _VetVerificationScreenState extends State<VetVerificationScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Terms & Conditions',
-                        style:
-                            TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                    const Text(
+                      'Terms & Conditions',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                      ),
+                    ),
                     const SizedBox(height: 8),
                     const Text(
                       'By submitting this request, you confirm the documents provided are authentic and belong to you. False submissions may result in account suspension.',
-                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Row(
                       children: [
                         Checkbox(
                           value: _acceptedTerms,
-                          onChanged: (v) =>
-                              setState(() => _acceptedTerms = v ?? false),
+                          onChanged:
+                              (v) =>
+                                  setState(() => _acceptedTerms = v ?? false),
                         ),
                         const Expanded(
-                          child: Text('I have read and I accept.',
-                              style: TextStyle(fontSize: 12)),
+                          child: Text(
+                            'I have read and I accept.',
+                            style: TextStyle(fontSize: 12),
+                          ),
                         ),
                       ],
                     ),
@@ -263,8 +374,10 @@ class _VetVerificationScreenState extends State<VetVerificationScreen> {
               ),
               if (_errorText != null) ...[
                 const SizedBox(height: 10),
-                Text(_errorText!,
-                    style: const TextStyle(color: AppColors.danger, fontSize: 12)),
+                Text(
+                  _errorText!,
+                  style: const TextStyle(color: AppColors.danger, fontSize: 12),
+                ),
               ],
               const SizedBox(height: 24),
               Row(
@@ -272,7 +385,9 @@ class _VetVerificationScreenState extends State<VetVerificationScreen> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed:
-                          _isSubmitting ? null : () => Navigator.of(context).pop(),
+                          _isSubmitting
+                              ? null
+                              : () => Navigator.of(context).pop(),
                       child: const Text('Cancel'),
                     ),
                   ),
@@ -280,18 +395,25 @@ class _VetVerificationScreenState extends State<VetVerificationScreen> {
                   Expanded(
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(255, 253, 231, 159),
+                        backgroundColor: const Color.fromARGB(
+                          255,
+                          253,
+                          231,
+                          159,
+                        ),
                         foregroundColor: Colors.black,
                       ),
                       onPressed: _isSubmitting ? null : _submitRequest,
-                      child: _isSubmitting
-                          ? const SizedBox(
-                              height: 18,
-                              width: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                              
-                            )
-                          : const Text('Submit'),
+                      child:
+                          _isSubmitting
+                              ? const SizedBox(
+                                height: 18,
+                                width: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                              : const Text('Submit'),
                     ),
                   ),
                 ],
@@ -304,14 +426,17 @@ class _VetVerificationScreenState extends State<VetVerificationScreen> {
   }
 
   Widget _sectionLabel(String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Text(text, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
-      );
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Text(
+      text,
+      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+    ),
+  );
 
   @override
   void dispose() {
     _clinicNameController.dispose();
-    _clinicAddressController.dispose();
+    //_clinicAddressController.dispose();
     _contactController.dispose();
     _pageController.dispose();
     super.dispose();
