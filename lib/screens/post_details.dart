@@ -57,6 +57,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
             postID,
             userID,
             caption,
+            category,
             created_at,
 
             profiles (
@@ -450,14 +451,14 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
     //====================================================================
     //EDIT POST 
-    Future<void> _editPost() async {
+     Future<void> _editPost() async {
       final controller = TextEditingController(
         text: _post?.caption ?? '',
       );
 
       final updatedCaption = await showDialog<String>(
         context: context,
-        builder: (context) {
+        builder: (dialogContext) {
           return AlertDialog(
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(16),
@@ -474,19 +475,19 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
               autofocus: true,
               decoration: const InputDecoration(
                 hintText: 'Write your caption...',
+                border: OutlineInputBorder(),
               ),
             ),
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.of(context).pop();
+                  Navigator.of(dialogContext).pop();
                 },
                 child: const Text('Cancel'),
               ),
-
               ElevatedButton(
                 onPressed: () {
-                  Navigator.of(context).pop(
+                  Navigator.of(dialogContext).pop(
                     controller.text.trim(),
                   );
                 },
@@ -497,43 +498,53 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         },
       );
 
-      controller.dispose();
+      // Wait until Flutter has finished removing the dialog
+      // before disposing the controller.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        controller.dispose();
+      });
 
-      if (updatedCaption == null) return;
+      if (!mounted || updatedCaption == null) {
+        return;
+      }
 
       try {
+        final user = Supabase.instance.client.auth.currentUser;
+
+        if (user == null) {
+          throw Exception('User is not logged in.');
+        }
+
         await Supabase.instance.client
             .from('Post')
             .update({
               'caption': updatedCaption,
             })
             .eq('postID', widget.postId)
-            .eq(
-              'userID',
-              Supabase.instance.client.auth.currentUser!.id,
-            );
+            .eq('userID', user.id);
 
         if (!mounted) return;
 
-        await _fetchPost();
-
-        setState(() {
-          _post = Post(
-            id: _post!.id,
-            authorId: _post!.authorId,
-            authorName: _post!.authorName,
-            authorAvatarUrl: _post!.authorAvatarUrl,
-            caption: updatedCaption,
-            imageUrl: _post!.imageUrl,
-            keywords: _post!.keywords,
-            likeCount: _post!.likeCount,
-            commentCount: _post!.commentCount,
-            createdAt: _post!.createdAt,
-            isLiked: _post!.isLiked,
-            categories: _post!.categories,
-            isVerified: _post!.isVerified,
-          );
-        });
+        // Update the existing post locally.
+        if (_post != null) {
+          setState(() {
+            _post = Post(
+              id: _post!.id,
+              authorId: _post!.authorId,
+              authorName: _post!.authorName,
+              authorAvatarUrl: _post!.authorAvatarUrl,
+              caption: updatedCaption,
+              imageUrl: _post!.imageUrl,
+              keywords: _post!.keywords,
+              likeCount: _post!.likeCount,
+              commentCount: _post!.commentCount,
+              createdAt: _post!.createdAt,
+              isLiked: _post!.isLiked,
+              categories: _post!.categories,
+              isVerified: _post!.isVerified,
+            );
+          });
+        }
 
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -545,7 +556,9 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to update post: $e'),
+            content: Text(
+              'Failed to update post: $e',
+            ),
           ),
         );
       }
@@ -809,6 +822,34 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
           ),
         ],
         const SizedBox(height: 12),
+
+        if (post.categories.isNotEmpty) ...[
+          const SizedBox(height: 10),
+
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: post.categories.map((category) {
+              return Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.chipGrey,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  category,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ],
      
 
            // ---------------------------------------------------------------------

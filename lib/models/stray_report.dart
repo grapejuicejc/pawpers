@@ -63,7 +63,8 @@ class StrayReport {
 
       username: profile?['username']?.toString(),
       profilePhotoUrl: profile?['profilePhotoUrl']?.toString(),
-      isVerified: profile != null ? (profile['isVerified'] as bool? ?? false) : false,
+      isVerified:
+          profile != null ? (profile['isVerified'] as bool? ?? false) : false,
 
       imageUrls:
           images
