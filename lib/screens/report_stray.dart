@@ -165,9 +165,6 @@ class _ReportStrayScreenState extends State<ReportStrayScreen> {
             'latitude': _selectedLocation!.latitude,
             'longitude': _selectedLocation!.longitude,
             'location': _location,
-                // _locationController.text.trim().isEmpty
-                //     ? null
-                //     : _locationController.text.trim(),
             'status': 'active',
           })
           .select('strayID')
@@ -177,10 +174,8 @@ class _ReportStrayScreenState extends State<ReportStrayScreen> {
 
       print('Created stray report: $strayId');
 
-      // --------------------------------------------------------
-      // 2. UPLOAD EACH IMAGE
-      // --------------------------------------------------------
 
+      // 2. UPLOAD EACH IMAGE
       for (int i = 0; i < _selectedImages.length; i++) {
         final image = _selectedImages[i];
 
@@ -192,8 +187,7 @@ class _ReportStrayScreenState extends State<ReportStrayScreen> {
         final fileName =
             '${DateTime.now().millisecondsSinceEpoch}_$i.$fileExtension';
 
-        final filePath =
-            '${user.id}/$strayId/$fileName';
+        final filePath = '${user.id}/$strayId/$fileName';
 
         await supabase.storage
             .from('stray-reports')
@@ -205,20 +199,14 @@ class _ReportStrayScreenState extends State<ReportStrayScreen> {
               ),
             );
 
-        // ------------------------------------------------------
         // 3. GET PUBLIC URL
-        // ------------------------------------------------------
-
         final imageUrl = supabase.storage
             .from('stray-reports')
             .getPublicUrl(filePath);
 
         print('Uploaded image: $imageUrl');
 
-        // ------------------------------------------------------
         // 4. SAVE URL TO DATABASE
-        // ------------------------------------------------------
-
         await supabase.from('StrayReportImages').insert({
           'strayID': strayId,
           'photoUrl': imageUrl,
@@ -502,50 +490,7 @@ class _ReportStrayScreenState extends State<ReportStrayScreen> {
                 ),
               ),
 
-              // OutlinedButton.icon(
-              //   onPressed: () {
-              //     setState(() {
-              //       _latitude = 3.1390;
-              //       _longitude = 101.6869;
-              //     });
-
-              //     ScaffoldMessenger.of(
-              //       context,
-              //     ).showSnackBar(
-              //       const SnackBar(
-              //         content: Text(
-              //           'Temporary location selected.',
-              //         ),
-              //       ),
-              //     );
-              //   },
-              //   icon: const Icon(
-              //     Icons.map_outlined,
-              //   ),
-              //   label: const Text(
-              //     'Select Location',
-              //   ),
-              // ),
-
-              // if (_latitude != null &&
-              //     _longitude != null)
-              //   Padding(
-              //     padding:
-              //         const EdgeInsets.only(
-              //       top: 8,
-              //     ),
-              //     child: Text(
-              //       'Coordinates: '
-              //       '${_latitude!.toStringAsFixed(5)}, '
-              //       '${_longitude!.toStringAsFixed(5)}',
-              //       style: const TextStyle(
-              //         fontSize: 12,
-              //         color:
-              //             AppColors.textSecondary,
-              //       ),
-              //     ),
-              //   ),
-
+          
               const SizedBox(height: 32),
 
               // ------------------------------------------------
@@ -585,7 +530,7 @@ class _ReportStrayScreenState extends State<ReportStrayScreen> {
     );
   }
 
-  Future<void> _selectLocation() async {
+    Future<void> _selectLocation() async {
     final result = await Navigator.of(context).push<LocationPickerResult>(
       MaterialPageRoute(
         builder: (_) => LocationPickerScreen(
@@ -598,47 +543,66 @@ class _ReportStrayScreenState extends State<ReportStrayScreen> {
 
     if (result == null) return;
 
-    try {
-      final placemarks = await placemarkFromCoordinates(
-        result.location.latitude,
-        result.location.longitude,
-        
-      );
+    setState(() {
+      _selectedLocation = result.location;
+      _location = result.name;
+    });
+  }
 
-      String location = '';
+  // Future<void> _selectLocation() async {
+  //   final result = await Navigator.of(context).push<LocationPickerResult>(
+  //     MaterialPageRoute(
+  //       builder: (_) => LocationPickerScreen(
+  //         initialLocation:
+  //             _selectedLocation ??
+  //             const LatLng(3.1390, 101.6869),
+  //       ),
+  //     ),
+  //   );
+
+  //   if (result == null) return;
+
+  //   try {
+  //     final placemarks = await placemarkFromCoordinates(
+  //       result.location.latitude,
+  //       result.location.longitude,
+        
+  //     );
+
+  //     String location = '';
     
 
-      if (placemarks.isNotEmpty) {
-        final place = placemarks.first;
+  //     if (placemarks.isNotEmpty) {
+  //       final place = placemarks.first;
 
-        final parts = <String>[
-          if (place.name != null && place.name!.isNotEmpty)
-            place.name!,
-          if (place.street != null && place.street!.isNotEmpty)
-            place.street!,
-          if (place.locality != null && place.locality!.isNotEmpty)
-            place.locality!,
-          if (place.administrativeArea != null &&
-              place.administrativeArea!.isNotEmpty)
-            place.administrativeArea!,
-        ];
+  //       final parts = <String>[
+  //         if (place.name != null && place.name!.isNotEmpty)
+  //           place.name!,
+  //         if (place.street != null && place.street!.isNotEmpty)
+  //           place.street!,
+  //         if (place.locality != null && place.locality!.isNotEmpty)
+  //           place.locality!,
+  //         if (place.administrativeArea != null &&
+  //             place.administrativeArea!.isNotEmpty)
+  //           place.administrativeArea!,
+  //       ];
 
-        location = parts.join(', ');
-      }
+  //       location = parts.join(', ');
+  //     }
 
-      setState(() {
-        _selectedLocation = result.location;
-        _location = location;
-      });
-    } catch (e) {
-      print('Error getting location name: $e');
+  //     setState(() {
+  //       _selectedLocation = result.location;
+  //       _location = location;
+  //     });
+  //   } catch (e) {
+  //     print('Error getting location name: $e');
 
-      setState(() {
-        _selectedLocation = result.location;
-        _location = null;
-      });
-    }
-  }
+  //     setState(() {
+  //       _selectedLocation = result.location;
+  //       _location = null;
+  //     });
+  //   }
+  // }
   
 }
 
@@ -1141,9 +1105,17 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
 
       if (!mounted) return;
 
+      final displayName =
+          data['displayName']?['text']?.toString();
+
       setState(() {
         _selectedLocation = newLocation;
-         _selectedPlaceName = formattedAddress ?? prediction.description;
+        _selectedPlaceName =
+            displayName != null && formattedAddress != null
+                ? '$displayName, $formattedAddress'
+                : displayName ??
+                    formattedAddress ??
+                    prediction.description;
         _searchController.text = prediction.mainText;
         _predictions = [];
         _isSearching = false;

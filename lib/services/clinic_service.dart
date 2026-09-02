@@ -17,9 +17,7 @@ class ClinicService {
         "&key=$apiKey";
 
     final response = await http.get(Uri.parse(url));
-
     final data = json.decode(response.body);
-
     List<VetClinic> clinics = [];
 
     for (var place in data["results"]) {
@@ -38,7 +36,6 @@ class ClinicService {
         ),
       );
     }
-
     return clinics;
   }
 
