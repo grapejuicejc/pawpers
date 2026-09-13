@@ -14,8 +14,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
 
   bool _isLoading = false;
   String? _errorText;
-  final bool _obscurePassword = true;
-  final bool _obscureConfirmPassword = true;
+
 
   Future<void> _sendResetEmail() async {
     final email = _emailController.text.trim();
@@ -167,6 +166,8 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
 
   bool _isLoading = false;
   String? _errorText;
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   Future<void> _updatePassword() async {
     final password = _passwordController.text;
