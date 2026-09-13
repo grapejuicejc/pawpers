@@ -320,19 +320,28 @@ class _StrayReportCommentsScreenState
                           // FIND REPLIES
                           // ------------------------------------------------
 
-                          final replies =
-                              _comments.where(
-                            (reply) {
+                          final List<Map<String, dynamic>> threadReplies = [];
 
-                              return reply[
-                                    'parentCommentId'
-                                  ]?.toString() ==
-                                  comment[
-                                    'commentID'
-                                  ]?.toString();
+                          void collectReplies(
+                            Map<String, dynamic> parentComment,
+                          ) {
+                            final parentId =
+                                parentComment['commentID']?.toString();
 
-                            },
-                          ).toList();
+                            if (parentId == null) return;
+
+                            final children = _comments.where((reply) {
+                              return reply['parentCommentId']?.toString() ==
+                                  parentId;
+                            }).toList();
+
+                            for (final child in children) {
+                              threadReplies.add(child);
+                              collectReplies(child);
+                            }
+                          }
+
+                          collectReplies(comment);
 
                           return Column(
                             crossAxisAlignment:
@@ -353,7 +362,7 @@ class _StrayReportCommentsScreenState
                               // REPLIES
                               // ==================================================
 
-                              if (replies.isNotEmpty)
+                              if (threadReplies.isNotEmpty)
 
                                 Padding(
                                   padding:
@@ -364,7 +373,7 @@ class _StrayReportCommentsScreenState
 
                                   child: Column(
                                     children:
-                                        replies.map(
+                                        threadReplies.map(
                                       (reply) {
 
                                         return Padding(

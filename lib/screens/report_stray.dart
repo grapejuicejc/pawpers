@@ -829,6 +829,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         _isLoadingLocation = false;
       });
 
+      _reverseGeocodeAndSetName(currentLocation);
+
       // Move map to user's current location.
       if (_mapController != null) {
         await _mapController!.animateCamera(
@@ -1017,6 +1019,41 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       });
     }
   }
+  // ============================================================
+// REVERSE GEOCODE (tap / drag / current location)
+// ============================================================
+
+  Future<void> _reverseGeocodeAndSetName(LatLng position) async {
+    try {
+      final placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isEmpty) {
+        if (mounted) setState(() => _selectedPlaceName = null);
+        return;
+      }
+
+      final place = placemarks.first;
+
+      final parts = <String>[
+        if (place.name != null && place.name!.isNotEmpty) place.name!,
+        if (place.street != null && place.street!.isNotEmpty) place.street!,
+        if (place.locality != null && place.locality!.isNotEmpty) place.locality!,
+        if (place.administrativeArea != null && place.administrativeArea!.isNotEmpty)
+          place.administrativeArea!,
+      ];
+
+      if (!mounted) return;
+      setState(() {
+        _selectedPlaceName = parts.isNotEmpty ? parts.join(', ') : null;
+      });
+    } catch (e) {
+      print('Error reverse geocoding: $e');
+      if (mounted) setState(() => _selectedPlaceName = null);
+    }
+  }
 
   // ============================================================
   // SELECT SEARCH RESULT
@@ -1144,6 +1181,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       _searchController.clear();
       _predictions = [];
     });
+     _reverseGeocodeAndSetName(position);
   }
 
   // ============================================================
@@ -1157,6 +1195,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
       _searchController.clear();
       _predictions = [];
     });
+     _reverseGeocodeAndSetName(position);
   }
 
   // ============================================================
@@ -1207,6 +1246,8 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
         _searchController.clear();
         _predictions = [];
       });
+
+      await _reverseGeocodeAndSetName(currentLocation);
 
       await _mapController?.animateCamera(
         CameraUpdate.newCameraPosition(

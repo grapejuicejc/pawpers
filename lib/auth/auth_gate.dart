@@ -93,7 +93,7 @@ class _RoleRouterState extends State<_RoleRouter> {
       // Profile not written yet (e.g. right after sign-up) — wait and retry.
       await Future.delayed(const Duration(milliseconds: 400));
     }
-    return null; // genuinely missing after retries
+    return null; 
   }
 
   @override
