@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../models/post.dart';
 import '../../app_theme.dart';
+import 'other_user_profile.dart';
 
 class Comments extends StatefulWidget {
   final String postId;
@@ -299,23 +300,34 @@ Widget _buildReplies(PostComment parent) {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // PROFILE PHOTO
-              CircleAvatar(
-                radius: 16,
-                backgroundColor: AppColors.placeholder,
-                backgroundImage:
-                    reply.authorAvatarUrl != null &&
-                            reply.authorAvatarUrl!.isNotEmpty
-                        ? NetworkImage(reply.authorAvatarUrl!)
-                        : null,
-                child:
-                    reply.authorAvatarUrl == null ||
-                            reply.authorAvatarUrl!.isEmpty
-                        ? const Icon(
-                            Icons.person,
-                            size: 16,
-                            color: AppColors.textSecondary,
-                          )
-                        : null,
+              GestureDetector(
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => OtherUserProfilePage(
+                        userId: reply.authorId,
+                      ),
+                    ),
+                  );
+                },
+                child: CircleAvatar(
+                  radius: 16,
+                  backgroundColor: AppColors.placeholder,
+                  backgroundImage:
+                      reply.authorAvatarUrl != null &&
+                              reply.authorAvatarUrl!.isNotEmpty
+                          ? NetworkImage(reply.authorAvatarUrl!)
+                          : null,
+                  child:
+                      reply.authorAvatarUrl == null ||
+                              reply.authorAvatarUrl!.isEmpty
+                          ? const Icon(
+                              Icons.person,
+                              size: 16,
+                              color: AppColors.textSecondary,
+                            )
+                          : null,
+                ),
               ),
 
               const SizedBox(width: 8),
@@ -482,30 +494,41 @@ Widget _buildReplies(PostComment parent) {
                                   // -----------------------------------------
                                   // PROFILE PHOTO
                                   // -----------------------------------------
-                                  CircleAvatar(
-                                    radius: 18,
+                                  GestureDetector(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) => OtherUserProfilePage(
+                                            userId: comment.authorId,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: CircleAvatar(
+                                      radius: 18,
 
-                                    backgroundColor: AppColors.placeholder,
+                                      backgroundColor: AppColors.placeholder,
 
-                                    backgroundImage:
-                                        comment.authorAvatarUrl != null &&
-                                                comment
-                                                    .authorAvatarUrl!
-                                                    .isNotEmpty
-                                            ? NetworkImage(
-                                              comment.authorAvatarUrl!,
-                                            )
-                                            : null,
+                                      backgroundImage:
+                                          comment.authorAvatarUrl != null &&
+                                                  comment
+                                                      .authorAvatarUrl!
+                                                      .isNotEmpty
+                                              ? NetworkImage(
+                                                  comment.authorAvatarUrl!,
+                                                )
+                                              : null,
 
-                                    child:
-                                        comment.authorAvatarUrl == null ||
-                                                comment.authorAvatarUrl!.isEmpty
-                                            ? const Icon(
-                                              Icons.person,
-                                              size: 18,
-                                              color: AppColors.textSecondary,
-                                            )
-                                            : null,
+                                      child:
+                                          comment.authorAvatarUrl == null ||
+                                                  comment.authorAvatarUrl!.isEmpty
+                                              ? const Icon(
+                                                  Icons.person,
+                                                  size: 18,
+                                                  color: AppColors.textSecondary,
+                                                )
+                                              : null,
+                                    ),
                                   ),
 
                                   const SizedBox(width: 10),

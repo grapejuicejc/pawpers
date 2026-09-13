@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../app_theme.dart';
+import 'other_user_profile.dart';
 
 class StrayReportCommentsScreen extends StatefulWidget {
   final String strayId;
@@ -590,39 +591,50 @@ class _StrayReportCommentsScreenState
         // PROFILE PHOTO
         // ========================================================
 
-        CircleAvatar(
+        GestureDetector(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => OtherUserProfilePage(
+                  userId: comment['userID'].toString(),
+                ),
+              ),
+            );
+          },
+          child: CircleAvatar(
 
-          radius:
-              isReply ? 16 : 18,
+            radius:
+                isReply ? 16 : 18,
 
-          backgroundColor:
-              AppColors.placeholder,
+            backgroundColor:
+                AppColors.placeholder,
 
-          backgroundImage:
+            backgroundImage:
 
-              profilePhoto != null &&
-                      profilePhoto.isNotEmpty
+                profilePhoto != null &&
+                        profilePhoto.isNotEmpty
 
-                  ? NetworkImage(
-                      profilePhoto,
-                    )
+                    ? NetworkImage(
+                        profilePhoto,
+                      )
 
-                  : null,
+                    : null,
 
-          child:
+            child:
 
-              profilePhoto == null ||
-                      profilePhoto.isEmpty
+                profilePhoto == null ||
+                        profilePhoto.isEmpty
 
-                  ? Icon(
-                      Icons.person,
-                      size:
-                          isReply ? 16 : 20,
-                      color:
-                          AppColors.textSecondary,
-                    )
+                    ? Icon(
+                        Icons.person,
+                        size:
+                            isReply ? 16 : 20,
+                        color:
+                            AppColors.textSecondary,
+                      )
 
-                  : null,
+                    : null,
+          ),
         ),
 
         const SizedBox(
@@ -643,13 +655,24 @@ class _StrayReportCommentsScreenState
              Row(
               children: [
                 Flexible(
-                  child: Text(
-                    username,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w700,
-                      fontSize: isReply ? 13 : 13,
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => OtherUserProfilePage(
+                            userId: comment['userID'].toString(),
+                          ),
+                        ),
+                      );
+                    },
+                    child: Text(
+                      username,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: isReply ? 13 : 13,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 if (isVerified) ...[

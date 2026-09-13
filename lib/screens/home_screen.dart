@@ -15,6 +15,16 @@ import 'report_stray.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'stray_report_comments.dart';
 import 'stray_report_details.dart';
+import 'other_user_profile.dart';
+
+void _openOtherUserProfile(BuildContext context, String userId) {
+  Navigator.of(context).push(
+    MaterialPageRoute(
+      builder: (_) => OtherUserProfilePage(userId: userId),
+    ),
+  );
+}
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -103,7 +113,6 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
 
     await _fetchPosts();
   }
-
 
   Future<void> _fetchPosts() async {
     setState(() {
@@ -700,23 +709,29 @@ class _StrayReportCardState extends State<_StrayReportCard> {
           // USER + STATUS
           Row(
             children: [
-              CircleAvatar(
-                radius: 14,
-                backgroundColor: AppColors.placeholder,
-                backgroundImage:
-                    report.profilePhotoUrl != null &&
-                            report.profilePhotoUrl!.isNotEmpty
-                        ? NetworkImage(report.profilePhotoUrl!)
-                        : null,
-                child:
-                    report.profilePhotoUrl == null ||
-                            report.profilePhotoUrl!.isEmpty
-                        ? const Icon(
-                          Icons.person,
-                          size: 16,
-                          color: AppColors.textSecondary,
-                        )
-                        : null,
+              GestureDetector(
+                onTap: () => _openOtherUserProfile(
+                  context,
+                  widget.report.userId,
+                ),
+                child: CircleAvatar(
+                  radius: 14,
+                  backgroundColor: AppColors.placeholder,
+                  backgroundImage:
+                      report.profilePhotoUrl != null &&
+                              report.profilePhotoUrl!.isNotEmpty
+                          ? NetworkImage(report.profilePhotoUrl!)
+                          : null,
+                  child:
+                      report.profilePhotoUrl == null ||
+                              report.profilePhotoUrl!.isEmpty
+                          ? const Icon(
+                            Icons.person,
+                            size: 16,
+                            color: AppColors.textSecondary,
+                          )
+                          : null,
+                ),
               ),
 
               const SizedBox(width: 8),
@@ -725,13 +740,19 @@ class _StrayReportCardState extends State<_StrayReportCard> {
                 child: Row(
                   children: [
                     Flexible(
-                      child: Text(
-                        report.username ?? 'Unknown User',
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
+                      child: GestureDetector(
+                        onTap: () => _openOtherUserProfile(
+                          context,
+                          widget.report.userId,
                         ),
-                        overflow: TextOverflow.ellipsis,
+                        child: Text(
+                          report.username ?? 'Unknown User',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                     ),
                     if (report.isVerified) ...[
@@ -829,8 +850,6 @@ class _StrayReportCardState extends State<_StrayReportCard> {
               ),
             ),
 
-         
-
           // DESCRIPTION
           if (report.description != null &&
               report.description!.trim().isNotEmpty) ...[
@@ -913,6 +932,7 @@ class _StrayReportCardState extends State<_StrayReportCard> {
                     ),
                   ),
                 ),
+
               ],
             ),
           ),
@@ -926,16 +946,14 @@ class _StrayReportCardState extends State<_StrayReportCard> {
     final longitude = widget.report.longitude;
     final location = widget.report.location;
 
-    
-
     if (latitude == null || longitude == null) {
       return;
     }
 
-     final query =
-      (location != null && location.trim().isNotEmpty)
-          ? location.trim()
-          : '$latitude,$longitude';
+    final query =
+        (location != null && location.trim().isNotEmpty)
+            ? location.trim()
+            : '$latitude,$longitude';
 
     final uri = Uri.parse(
       'https://www.google.com/maps/search/?api=1&query=${Uri.encodeComponent(query)}',
@@ -1071,33 +1089,45 @@ class _PostCardState extends State<_PostCard> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // PROFILE PHOTO
-                CircleAvatar(
-                  radius: 14,
-                  backgroundColor: AppColors.placeholder,
-                  backgroundImage:
-                      widget.post.authorAvatarUrl != null &&
-                              widget.post.authorAvatarUrl!.isNotEmpty
-                          ? NetworkImage(widget.post.authorAvatarUrl!)
-                          : null,
-                  child:
-                      widget.post.authorAvatarUrl == null ||
-                              widget.post.authorAvatarUrl!.isEmpty
-                          ? const Icon(
-                            Icons.person,
-                            size: 16,
-                            color: AppColors.textSecondary,
-                          )
-                          : null,
+                GestureDetector(
+                  onTap: () => _openOtherUserProfile(
+                    context,
+                    widget.post.authorId,
+                  ),
+                  child: CircleAvatar(
+                    radius: 14,
+                    backgroundColor: AppColors.placeholder,
+                    backgroundImage:
+                        widget.post.authorAvatarUrl != null &&
+                                widget.post.authorAvatarUrl!.isNotEmpty
+                            ? NetworkImage(widget.post.authorAvatarUrl!)
+                            : null,
+                    child:
+                        widget.post.authorAvatarUrl == null ||
+                                widget.post.authorAvatarUrl!.isEmpty
+                            ? const Icon(
+                              Icons.person,
+                              size: 16,
+                              color: AppColors.textSecondary,
+                            )
+                            : null,
+                  ),
                 ),
 
                 const SizedBox(width: 8),
 
                 // USERNAME
-                Text(
-                  widget.post.authorName,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
+                GestureDetector(
+                  onTap: () => _openOtherUserProfile(
+                    context,
+                    widget.post.authorId,
+                  ),
+                  child: Text(
+                    widget.post.authorName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
 
