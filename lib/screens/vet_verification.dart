@@ -60,23 +60,6 @@ class _VetVerificationScreenState extends State<VetVerificationScreen> {
     });
   }
 
-  // void _goToStepTwo() {
-  //   if (_pickedFiles.isEmpty) {
-  //     setState(() => _errorText = 'Please upload at least one document.');
-  //     return;
-  //   }
-  //   if (_clinicNameController.text.trim().isEmpty) {
-  //     setState(() => _errorText = 'Please enter your clinic name.');
-  //     return;
-  //   }
-
-  //   setState(() => _errorText = null);
-  //   _pageController.nextPage(
-  //     duration: const Duration(milliseconds: 250),
-  //     curve: Curves.easeInOut,
-  //   );
-  // }
-
   Future<List<String>> _uploadDocuments(String userId) async {
     final supabase = Supabase.instance.client;
     final paths = <String>[];
@@ -101,6 +84,7 @@ class _VetVerificationScreenState extends State<VetVerificationScreen> {
 
     return paths;
   }
+
   Future<void> _selectClinicLocation() async {
     final result = await Navigator.of(context).push<LocationPickerResult>(
       MaterialPageRoute(
@@ -117,7 +101,7 @@ class _VetVerificationScreenState extends State<VetVerificationScreen> {
     setState(() {
       _clinicLatitude = result.location.latitude;
       _clinicLongitude = result.location.longitude;
-      _clinicAddress = result.name; // may be null if manually pinned
+      _clinicAddress = result.name; 
     });
 
     // If no name came back (manual map tap/drag), reverse-geocode as fallback.

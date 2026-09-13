@@ -174,7 +174,6 @@ class _ReportStrayScreenState extends State<ReportStrayScreen> {
 
       print('Created stray report: $strayId');
 
-
       // 2. UPLOAD EACH IMAGE
       for (int i = 0; i < _selectedImages.length; i++) {
         final image = _selectedImages[i];
@@ -420,26 +419,10 @@ class _ReportStrayScreenState extends State<ReportStrayScreen> {
 
               const SizedBox(height: 8),
 
-              // TextField(
-              //   controller:
-              //       _locationController,
-              //   decoration:
-              //       const InputDecoration(
-              //     hintText:
-              //         'e.g. APU, Technology Park Malaysia',
-              //     prefixIcon: Icon(
-              //       Icons.location_on_outlined,
-              //     ),
-              //     border: OutlineInputBorder(),
-              //   ),
-              // ),
-
               const SizedBox(height: 12),
 
               // TEMPORARY LOCATION BUTTON
-              //
-              // We'll replace this with Google Maps /
-              // GPS location picker next.
+           
               OutlinedButton.icon(
                 onPressed: _isSubmitting ? null : _selectLocation,
                 icon: const Icon(

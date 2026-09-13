@@ -63,25 +63,16 @@ class ClinicService {
     List<VetClinic> clinics = [];
 
     for (var place in data["results"]) {
-
       clinics.add(
         VetClinic(
           clinicId: place["place_id"],
-
           clinicName: place["name"],
-
           address: place["formatted_address"] ?? place["vicinity"],
-
           city: "",
-
           phoneNumber: "",
-
           operatingHours: "",
-
           services: [],
-
           latitude: place["geometry"]["location"]["lat"],
-
           longitude: place["geometry"]["location"]["lng"],
         ),
       );

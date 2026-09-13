@@ -217,10 +217,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     }
   }
 
-  // ------------------------------------------------------------
-  // VALIDATE AND CREATE POST
-  // ------------------------------------------------------------
 
+  // VALIDATE AND CREATE POST
   Future<void> _handlePost() async {
     final caption = _captionController.text.trim();
 
@@ -256,17 +254,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
     try {
       final supabase = Supabase.instance.client;
-
       final user = supabase.auth.currentUser;
-
       if (user == null) {
         throw Exception('User is not logged in.');
       }
 
-      // ----------------------------------------------------------
-      // 1. CREATE POST
-      // ----------------------------------------------------------
 
+      // 1. CREATE POST
       final post = await supabase
           .from('Post')
           .insert({
@@ -281,10 +275,7 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
 
       print('Created post: $postId');
 
-      // ----------------------------------------------------------
       // 2. UPLOAD IMAGES
-      // ----------------------------------------------------------
-
       for (int i = 0; i < _selectedImages.length; i++) {
         final image = _selectedImages[i];
 
@@ -305,10 +296,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               ),
             );
 
-        // --------------------------------------------------------
-        // 3. GET PUBLIC URL
-        // --------------------------------------------------------
 
+        // 3. GET PUBLIC URL
         final imageUrl = supabase.storage
             .from('post-images')
             .getPublicUrl(storagePath);

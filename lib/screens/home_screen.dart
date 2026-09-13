@@ -16,9 +16,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'stray_report_comments.dart';
 import 'stray_report_details.dart';
 
-/// Root shell shown right after login. Holds the bottom nav and swaps
-/// between the 4 real tabs (the 5th "slot" is the "+" button, which opens
-/// the upload action sheet instead of navigating).
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -28,15 +25,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _navIndex = 0;
-
-  // Index 2 is the "+" button and never actually renders a page.
-  // final _pages = const [
-  //   _HomeFeedTab(),
-  //   AiEmotionScreen(),
-  //   SizedBox.shrink(), // placeholder, never shown (see CustomBottomNav)
-  //   ViewClinic(),
-  //   ProfileScreen(),
-  // ];
 
   Widget _buildPage() {
     switch (_navIndex) {
@@ -116,10 +104,6 @@ class _HomeFeedTabState extends State<_HomeFeedTab> {
     await _fetchPosts();
   }
 
-  // DB (Supabase):
-  // final posts = await SupabaseService.instance.fetchPosts(
-  //   keywordFilter: filter,
-  // );
 
   Future<void> _fetchPosts() async {
     setState(() {
@@ -845,18 +829,7 @@ class _StrayReportCardState extends State<_StrayReportCard> {
               ),
             ),
 
-          // if (widget.report.latitude != null && widget.report.longitude != null)
-          //   Padding(
-          //     padding: const EdgeInsets.only(left: 24, top: 2),
-          //     child: Text(
-          //       '${widget.report.latitude!.toStringAsFixed(5)}, '
-          //       '${widget.report.longitude!.toStringAsFixed(5)}',
-          //       style: const TextStyle(
-          //         fontSize: 11,
-          //         color: AppColors.textSecondary,
-          //       ),
-          //     ),
-          //   ),
+         
 
           // DESCRIPTION
           if (report.description != null &&
