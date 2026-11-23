@@ -79,4 +79,8 @@ The models generate a predicted emotion along with a confidence score. These res
 
 ## User Interface
 
-<img width="1080" height="2412" alt="WhatsApp Image 2026-08-31 at 22 29 25" src="https://github.com/user-attachments/assets/c731150d-cb64-41b7-a8cf-b378cc837bad" />
+<img width="300" height="520" alt="WhatsApp Image 2026-08-31 at 22 29 25" src="https://github.com/user-attachments/assets/c731150d-cb64-41b7-a8cf-b378cc837bad" />
+<img width="300" height="530" alt="WhatsApp Image 2026-08-31 at 22 29 29" src="https://github.com/user-attachments/assets/ee6ef10e-dcf5-433e-bc4e-345aea2b3773" />
+<img width="300" height="520" alt="WhatsApp Image 2026-08-31 at 22 29 34" src="https://github.com/user-attachments/assets/13e124ae-9227-496c-aa1c-99114344b503" />
+<img width="300" height="520" alt="WhatsApp Image 2026-08-31 at 22 29 28 (2)" src="https://github.com/user-attachments/assets/6e70f4f6-241a-4735-98f7-92c82daeb169" />
+
