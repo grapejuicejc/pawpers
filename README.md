@@ -8,7 +8,7 @@ The application also incorporates AI-assisted emotion recognition to help users 
 
 ## Download the Application
 
-**[Download PawPers APK](YOUR_GITHUB_RELEASE_LINK_HERE)**
+**[Download PawPers APK](https://github.com/grapejuicejc/pawpers/releases/tag/v1.0.0)**
 
 - Platform: Android
 - Version: 1.0.0
